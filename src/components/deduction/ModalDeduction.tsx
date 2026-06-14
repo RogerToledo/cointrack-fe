@@ -1,5 +1,5 @@
 import { createDeduction, getDeductionById, updateDeduction } from '@/services/deduction';
-import { getEarnings, EarningsResponse } from '@/services/earning';
+import { getEarnings, EarningsResponse, Earning } from '@/services/earning';
 import axios from 'axios';
 import { useState, useEffect } from 'react';
 import React from 'react';
@@ -17,8 +17,9 @@ const ModalDeduction: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, i
     const [earningList, setEarningList] = useState<EarningsResponse>({ 
         message: [],
         statusCode: 0});
+    const [selectedPersonId, setSelectedPersonId] = useState('');
     const [description, setDescription] = useState('');
-    const [amount, setAmount] = useState(0);
+    const [amount, setAmount] = useState('');
     const [dateEnd, setDateEnd] = useState('');
     const [active, setActive] = useState(false);
     const [fixed, setFixed] = useState(false);
@@ -53,16 +54,24 @@ const ModalDeduction: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, i
                 const dateFormatted = deductionData.date_end ? deductionData.date_end.split('T')[0] : '';
 
                 setEarningId(deductionData.earning_id || '');
+
+                // pré-selecionar o proprietário com base no ganho carregado
+                const matchedEarning = earningResponse.message.find(
+                    (e: Earning) => e.id === deductionData.earning_id
+                );
+                if (matchedEarning) setSelectedPersonId(matchedEarning.person_id);
+
                 setDescription(deductionData.description);
-                setAmount(deductionData.amount);
+                setAmount(deductionData.amount?.toString() || '');
                 setDateEnd(dateFormatted);
                 setActive(deductionData.active);
                 setFixed(deductionData.fixed);
             } else {
                 setButtonText("Adicionar nova dedução");
                 setEarningId("");
+                setSelectedPersonId("");
                 setDescription("");
-                setAmount(0);
+                setAmount('');
                 setDateEnd("");
                 setActive(false);
                 setFixed(false);
@@ -81,11 +90,13 @@ const ModalDeduction: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, i
         e.preventDefault();
 
         try {
+            const amountFloat = parseFloat(String(amount).replace(',', '.'));
+
             if (isUpdate) {
-                await updateDeduction(deductionId, description, amount, active, fixed, dateEnd, earningId);
+                await updateDeduction(deductionId, description, amountFloat, active, fixed, dateEnd, earningId);
                 setSuccess("Dedução atualizada com sucesso!");
             } else {
-                await createDeduction(description, amount, active, fixed, dateEnd, earningId);
+                await createDeduction(description, amountFloat, active, fixed, dateEnd, earningId);
                 setSuccess("Dedução criada com sucesso!");
             }
 
@@ -111,6 +122,10 @@ const ModalDeduction: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, i
 
 
         switch(name) {
+            case 'PersonId':
+                setSelectedPersonId(value);
+                setEarningId('');
+                break;
             case 'EarningId':
                 setEarningId(value);
                 break;
@@ -118,7 +133,7 @@ const ModalDeduction: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, i
                 setDescription(value);
                 break;
             case 'Amount':
-                setAmount(Number(value));
+                setAmount(value);
                 break;
             case 'DateEnd':
                 setDateEnd(value);
@@ -206,20 +221,43 @@ const ModalDeduction: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, i
                             )}
                             <form onSubmit={handleSubmit} className="space-y-4" action="#">
                                 <div>
-                                    <label htmlFor="EarningId" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Proprietário</label>
+                                    <label htmlFor="PersonId" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Proprietário</label>
                                     <select 
-                                        name="EarningId" 
-                                        id="EarningId"
-                                        value={earningId}
+                                        name="PersonId" 
+                                        id="PersonId"
+                                        value={selectedPersonId}
                                         onChange={handleChange}
                                         disabled={isViewOnly}
                                         className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white"
                                         required
                                     >
-                                        <option value="">Escolha o proprietário do ganho</option>
-                                        {earningList.message.map((earning) => (
-                                            <option key={earning.id} value={earning.id}>{earning.person_name} - {earning.description}</option>
+                                        <option value="">Escolha o proprietário</option>
+                                        {Array.from(
+                                            new Map(
+                                                earningList.message.map((e: Earning) => [e.person_id, e.person_name])
+                                            ).entries()
+                                        ).map(([personId, personName]) => (
+                                            <option key={personId} value={personId}>{personName}</option>
                                         ))}
+                                    </select>    
+                                </div>
+                                <div>
+                                    <label htmlFor="EarningId" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Ganho</label>
+                                    <select 
+                                        name="EarningId" 
+                                        id="EarningId"
+                                        value={earningId}
+                                        onChange={handleChange}
+                                        disabled={isViewOnly || !selectedPersonId}
+                                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white"
+                                        required
+                                    >
+                                        <option value="">Escolha o ganho</option>
+                                        {earningList.message
+                                            .filter((e: Earning) => e.person_id === selectedPersonId)
+                                            .map((earning: Earning) => (
+                                                <option key={earning.id} value={earning.id}>{earning.description}</option>
+                                            ))}
                                     </select>    
                                 </div>
                                 <div>
@@ -239,14 +277,14 @@ const ModalDeduction: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, i
                                 <div>
                                     <label htmlFor="Amount" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Valor</label>
                                     <input 
-                                        type="number" 
+                                        type="text" 
                                         name="Amount"
                                         id="Amount" 
                                         value={amount}
                                         onChange={handleChange}
                                         disabled={isViewOnly}
                                         className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white" 
-                                        placeholder="0.00" 
+                                        placeholder="0,00" 
                                         required 
                                     />
                                 </div>

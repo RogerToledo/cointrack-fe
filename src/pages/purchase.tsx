@@ -1,9 +1,12 @@
 import Purchase from "@/components/purchase/Purchase";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 export default function PurchasePage() {
   return (
-    <div>
-      <Purchase />
-    </div>
+    <ProtectedRoute>
+      <div>
+        <Purchase />
+      </div>
+    </ProtectedRoute>
   );
 }

@@ -1,11 +1,38 @@
 import { useState } from 'react';
 import Link from 'next/link';
+import { useAuth } from '@/contexts/AuthContext';
+import { useFamily } from '@/contexts/FamilyContext';
+import { User, LogOut, ChevronDown, Users } from 'lucide-react';
 
 function NavBar() {
     const [isRegistrationOpen, setIsRegistrationOpen] = useState(false);
+    const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+    const [isFamilyMenuOpen, setIsFamilyMenuOpen] = useState(false);
+    const { user, isAuthenticated, logout } = useAuth();
+    const { families, selectedFamily, setSelectedFamily } = useFamily();
 
     const toggleRegistration = () => {
         setIsRegistrationOpen(!isRegistrationOpen);
+    };
+
+    const toggleUserMenu = () => {
+        setIsUserMenuOpen(!isUserMenuOpen);
+    };
+
+    const toggleFamilyMenu = () => {
+        setIsFamilyMenuOpen(!isFamilyMenuOpen);
+    };
+
+    const handleLogout = () => {
+        logout();
+    };
+
+    const handleFamilyChange = (familyId: string) => {
+        const family = families.find(f => f.id === familyId);
+        if (family) {
+            setSelectedFamily(family);
+            setIsFamilyMenuOpen(false);
+        }
     };
 
     return (
@@ -55,14 +82,6 @@ function NavBar() {
                                     <ul className="py-2 text-sm text-gray-700 dark:text-gray-400" aria-labelledby="dropdownLargeButton">
                                         <li>
                                             <Link 
-                                                href="/person" 
-                                                onClick={toggleRegistration}
-                                                className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">
-                                                    Pessoa
-                                            </Link>
-                                        </li>
-                                        <li>
-                                            <Link 
                                                 href="/creditCard" 
                                                 onClick={toggleRegistration}
                                                 className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">
@@ -108,8 +127,94 @@ function NavBar() {
                             <a href="#" className="block py-2 px-3 text-gray-900 rounded-sm hover:bg-gray-100 md:hover:bg-transparent md:border-0 md:hover:text-blue-700 md:p-0 dark:text-white md:dark:hover:text-blue-500 dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent">Relatórios</a>
                         </li>
                         <li>
-                            <a href="#" className="block py-2 px-3 text-gray-900 rounded-sm hover:bg-gray-100 md:hover:bg-transparent md:border-0 md:hover:text-blue-700 md:p-0 dark:text-white md:dark:hover:text-blue-500 dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent">Logout</a>
+                            <Link href="/family" className="block py-2 px-3 text-gray-900 rounded-sm hover:bg-gray-100 md:hover:bg-transparent md:border-0 md:hover:text-blue-700 md:p-0 dark:text-white md:dark:hover:text-blue-500 dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent">Família</Link>
                         </li>
+                        
+                        {/* Dropdown de Famílias */}
+                        {isAuthenticated && families.length > 0 && (
+                            <li className="relative">
+                                <button
+                                    id="familyMenuButton"
+                                    className="flex items-center justify-between w-full py-2 px-3 text-gray-900 rounded-sm hover:bg-gray-100 md:hover:bg-transparent md:border-0 md:hover:text-blue-700 md:p-0 md:w-auto dark:text-white md:dark:hover:text-blue-500 dark:focus:text-white dark:border-gray-700 dark:hover:bg-gray-700 md:dark:hover:bg-transparent"
+                                    onClick={toggleFamilyMenu}
+                                >
+                                    <Users className="w-4 h-4 me-2" />
+                                    {selectedFamily ? selectedFamily.name : 'Selecione'}
+                                    <ChevronDown className="w-3 h-3 ms-2" />
+                                </button>
+                                {/* Family Dropdown menu */}
+                                <div
+                                    id="familyDropdown"
+                                    className={`${isFamilyMenuOpen ? 'block' : 'hidden'} absolute right-0 z-10 font-normal bg-white divide-y divide-gray-100 rounded-lg shadow-sm w-48 dark:bg-gray-700 dark:divide-gray-600`}
+                                >
+                                    <ul className="py-2 text-sm text-gray-700 dark:text-gray-400">
+                                        {families.map((family) => (
+                                            <li key={family.id}>
+                                                <button
+                                                    onClick={() => handleFamilyChange(family.id)}
+                                                    className={`flex items-center w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white ${
+                                                        selectedFamily?.id === family.id ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' : ''
+                                                    }`}
+                                                >
+                                                    <Users className="w-4 h-4 me-2" />
+                                                    {family.name}
+                                                    {selectedFamily?.id === family.id && (
+                                                        <svg className="w-4 h-4 ms-auto" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                        </svg>
+                                                    )}
+                                                </button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            </li>
+                        )}
+                        
+                        {isAuthenticated ? (
+                            <li className="relative">
+                                <button
+                                    id="userMenuButton"
+                                    className="flex items-center justify-between w-full py-2 px-3 text-gray-900 rounded-sm hover:bg-gray-100 md:hover:bg-transparent md:border-0 md:hover:text-blue-700 md:p-0 md:w-auto dark:text-white md:dark:hover:text-blue-500 dark:focus:text-white dark:border-gray-700 dark:hover:bg-gray-700 md:dark:hover:bg-transparent"
+                                    onClick={toggleUserMenu}
+                                >
+                                    <User className="w-4 h-4 me-2" />
+                                    {user?.name}
+                                    <ChevronDown className="w-3 h-3 ms-2" />
+                                </button>
+                                {/* User Dropdown menu */}
+                                <div
+                                    id="userDropdown"
+                                    className={`${isUserMenuOpen ? 'block' : 'hidden'} absolute right-0 z-10 font-normal bg-white divide-y divide-gray-100 rounded-lg shadow-sm w-44 dark:bg-gray-700 dark:divide-gray-600`}
+                                >
+                                    <ul className="py-2 text-sm text-gray-700 dark:text-gray-400">
+                                        <li>
+                                            <Link 
+                                                href="/profile" 
+                                                onClick={toggleUserMenu}
+                                                className="flex items-center px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">
+                                                <User className="w-4 h-4 me-2" />
+                                                Meu Perfil
+                                            </Link>
+                                        </li>
+                                        <li>
+                                            <button
+                                                onClick={handleLogout}
+                                                className="flex items-center w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">
+                                                <LogOut className="w-4 h-4 me-2" />
+                                                Sair
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </li>
+                        ) : (
+                            <li>
+                                <Link href="/login" className="block py-2 px-3 text-gray-900 rounded-sm hover:bg-gray-100 md:hover:bg-transparent md:border-0 md:hover:text-blue-700 md:p-0 dark:text-white md:dark:hover:text-blue-500 dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent">
+                                    Login
+                                </Link>
+                            </li>
+                        )}
                     </ul>
                 </div>
             </div>

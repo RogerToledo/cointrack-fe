@@ -15,6 +15,22 @@ export interface PeopleResponse {
     statusCode: number;
 }
 
+export interface MeUser {
+    id: string;
+    name: string;
+    email: string;
+    level: string;
+}
+
+export interface MeResponse {
+    message: {
+        user: MeUser;
+        families: unknown[];
+    };
+    statusCode: number;
+}
+
+
 export const createPerson = async (name: string) => {
     const response = await instance.post('/v1/person', {
         name: name,
@@ -45,6 +61,6 @@ export const getPeople = async (id: string) => {
 }
 
 export const getPerson = async () => {
-    const response = await instance.get<PersonResponse>('/v1/person');
+    const response = await instance.get<MeResponse>('/v1/me');
     return response.data;
 }

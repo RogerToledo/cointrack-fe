@@ -16,7 +16,7 @@ const ModalEarning: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, isU
     const [buttonText, setButtonText] = useState("Adicionar novo ganho"); 
     const [earningOwner, setEarningOwner] = useState('');
     const [description, setDescription] = useState('');
-    const [amount, setAmount] = useState(0);
+    const [amount, setAmount] = useState('');
     const [date, setDate] = useState('');
     const [active, setActive] = useState(false);
     const [isMonthly, setIsMonthly] = useState(false);
@@ -40,7 +40,8 @@ const ModalEarning: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, isU
             if (isOpen) {
                 try {
                     const personResponse = await getPerson();
-                    const owners = personResponse.message || personResponse;
+                    const meUser = personResponse.message?.user;
+                    const owners: Person[] = meUser ? [{ id: meUser.id, name: meUser.name }] : [];
                     setOwnerList(owners);
 
                     if (earningId && earningId !== "" && (isUpdate || isViewOnly)) {
@@ -54,7 +55,7 @@ const ModalEarning: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, isU
 
                         setEarningOwner(ownerId);
                         setDescription(earningData.description);
-                        setAmount(earningData.amount);
+                        setAmount(earningData.amount?.toString() || '');
                         setDate(dateFormatted);
                         setActive(earningData.active);
                         setIsMonthly(earningData.is_monthly);
@@ -62,7 +63,7 @@ const ModalEarning: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, isU
                         setButtonText("Adicionar novo ganho");
                         setEarningOwner("");
                         setDescription("");
-                        setAmount(0);
+                        setAmount('');
                         setDate("");
                         setActive(false);
                         setIsMonthly(false);
@@ -80,7 +81,7 @@ const ModalEarning: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, isU
             }
         };
         loadInitialData();
-    }, [isOpen, isUpdate, earningId]);    
+    }, [isOpen, isUpdate, earningId, isViewOnly]);
 
         
     
@@ -93,11 +94,13 @@ const ModalEarning: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, isU
         }
 
         try {
+            const amountFloat = parseFloat(String(amount).replace(',', '.'));
+
             if (isUpdate) {
-                await updateEarning(earningId, description, amount, date, active, isMonthly, earningOwner);
+                await updateEarning(earningId, description, amountFloat, date, active, isMonthly, earningOwner);
                 setSuccess("Ganho atualizado com sucesso!");
             } else {
-                    await createEarning(description, amount, date, active, isMonthly, earningOwner);
+                    await createEarning(description, amountFloat, date, active, isMonthly, earningOwner);
                 setSuccess("Ganho criado com sucesso!");
             }
 
@@ -127,7 +130,7 @@ const ModalEarning: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, isU
                 setDescription(value);
                 break;
             case 'Amount':
-                setAmount(Number(value));
+                setAmount(value);
                 break;
             case 'Date':
                 setDate(value);
@@ -248,14 +251,14 @@ const ModalEarning: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, isU
                                 <div>
                                     <label htmlFor="Amount" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Valor</label>
                                     <input 
-                                        type="number" 
+                                        type="text" 
                                         name="Amount"
                                         id="Amount" 
                                         value={amount}
                                         onChange={handleChange}
                                         disabled={isViewOnly}
                                         className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white" 
-                                        placeholder="0.00" 
+                                        placeholder="0,00" 
                                         required 
                                     />
                                 </div>

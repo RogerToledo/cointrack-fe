@@ -1,9 +1,12 @@
 import Dashboard from "@/components/Dashboard"
+import ProtectedRoute from "@/components/ProtectedRoute"
 
 export default function DashboardPage() {
     return (
-        <div>
-            <Dashboard />
-        </div>
+        <ProtectedRoute>
+            <div>
+                <Dashboard />
+            </div>
+        </ProtectedRoute>
     )
 }

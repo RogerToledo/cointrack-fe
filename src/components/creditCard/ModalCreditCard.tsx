@@ -32,10 +32,9 @@ const ModalcreditCard: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, 
             if (isOpen) {
                 try {
                     const ownerResponse = await getPerson();
-                    const owners = ownerResponse.message || ownerResponse;
+                    const meUser = ownerResponse.message?.user;
+                    const owners: Person[] = meUser ? [{ id: meUser.id, name: meUser.name }] : [];
                     setOwnerList(owners);
-
-                    console.log("Owner list loaded:", owners);
 
                     if (isUpdate && creditCardId) {
                         setTitle("Atualização do Cartão de Crédito");
@@ -67,7 +66,7 @@ const ModalcreditCard: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, 
             }
         };
         loadInitialData();
-    }, [isOpen, isUpdate, creditCardId]);    
+    }, [isOpen, isUpdate, creditCardId]);
 
         
     

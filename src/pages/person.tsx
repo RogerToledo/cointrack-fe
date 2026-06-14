@@ -1,9 +1,12 @@
 import Person from "@/components/person/Person"
+import ProtectedRoute from "@/components/ProtectedRoute"
 
 export default function PersonPage() {
     return (
-        <div>
-            <Person />
-        </div>
+        <ProtectedRoute>
+            <div>
+                <Person />
+            </div>
+        </ProtectedRoute>
     )
 }

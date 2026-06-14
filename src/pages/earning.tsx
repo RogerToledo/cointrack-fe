@@ -1,9 +1,12 @@
 import Earning from "@/components/earning/Earning"
+import ProtectedRoute from "@/components/ProtectedRoute"
 
 export default function EarningPage() {
     return (
-        <div>
-            <Earning />
-        </div>
+        <ProtectedRoute>
+            <div>
+                <Earning />
+            </div>
+        </ProtectedRoute>
     )
 }
