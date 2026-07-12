@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getPurchase, createPurchase, updatePurchase } from '@/services/purchase';
 import { getCreditCards } from '@/services/creditCard';
-import { getPerson } from '@/services/person';
 import { getPaymentTypes } from '@/services/paymentType';
 import { getPurchaseTypes } from '@/services/purchaseType';
+import { useFamily } from '@/contexts/FamilyContext';
+import { useAuth } from '@/contexts/AuthContext';
 import axios from 'axios';
 
 type UUID = string;
@@ -59,6 +60,8 @@ const ModalPurchaseType: React.FC<ModalProps> = ({ isOpen, onClose, onPurchaseAc
     const [isSaving, setIsSaving] = useState(false);
     const [success, setSuccess] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const { selectedFamily } = useFamily();
+    const { user } = useAuth();
 
     const isViewOnly = !isUpdate && purchaseId !== null;
 
@@ -108,20 +111,32 @@ const ModalPurchaseType: React.FC<ModalProps> = ({ isOpen, onClose, onPurchaseAc
 
     const fetchMetadata = useCallback(async () => {
         try {
-            const [personsData, paymentTypesData, cardsData, purchaseTypesData] = await Promise.all([
-                getPerson(),
+            const [paymentTypesData, cardsData, purchaseTypesData] = await Promise.all([
                 getPaymentTypes(),
                 getCreditCards(),
                 getPurchaseTypes()
             ]);
-            setPersons(personsData.message || []);
-            setPaymentType(paymentTypesData.message || []);
-            setCards(cardsData.message || []);
-            setTypes(purchaseTypesData.message || []);
+
+            // Se tem família selecionada com membros, listar membros da família
+            if (selectedFamily?.members && selectedFamily.members.length > 0) {
+                const familyPersons = selectedFamily.members.map(member => ({
+                    id: member.person_id,
+                    name: member.person_name
+                }));
+                setPersons(familyPersons);
+            } else if (user) {
+                // Se não tem família, setar apenas o próprio usuário e pré-selecionar
+                setPersons([{ id: user.id, name: user.name }]);
+                setFormData(prev => ({ ...prev, person: user.id }));
+            }
+
+            setPaymentType(Array.isArray(paymentTypesData.message) ? paymentTypesData.message : []);
+            setCards(Array.isArray(cardsData.message) ? cardsData.message : []);
+            setTypes(Array.isArray(purchaseTypesData.message) ? purchaseTypesData.message : []);
         } catch (error) {
             console.error("Error fetching metadata", error);
         }
-    }, []);
+    }, [selectedFamily, user]);
 
     useEffect(() => {
         if (isOpen) { fetchMetadata(); }

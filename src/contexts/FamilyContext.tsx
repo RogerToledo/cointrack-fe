@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
-import { getUserFamilies, getFamilyMembers, Family } from '@/services/family';
-import { ApiError } from '@/types/api';
+import { Family, FamilyMember } from '@/services/family';
+import { getPerson } from '@/services/person';
 
 interface FamilyContextType {
     families: Family[];
@@ -27,61 +27,59 @@ export const FamilyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
         setIsLoading(true);
         try {
-            // Tentar buscar todas as famílias (endpoint pode retornar array ou objeto único)
-            const response = await getUserFamilies();
-            let userFamilies: Family[] = [];
+            const response = await getPerson();
+            const meData = response?.message;
 
-            // Se a resposta for um array, usar diretamente
-            if (Array.isArray(response.message)) {
-                userFamilies = response.message;
-            } else if (response.message) {
-                // Se for um objeto único, converter para array
-                userFamilies = [response.message];
+            if (!meData) {
+                setFamilies([]);
+                setSelectedFamilyState(null);
+                localStorage.removeItem('selectedFamilyId');
+                return;
             }
 
-            // Buscar membros para cada família
-            const familiesWithMembers = await Promise.all(
-                userFamilies.map(async (family) => {
-                    try {
-                        const membersResponse = await getFamilyMembers(family.id);
-                        return {
-                            ...family,
-                            members: membersResponse.message || []
-                        };
-                    } catch (err) {
-                        console.error(`Erro ao carregar membros da família ${family.id}:`, err);
-                        return {
-                            ...family,
-                            members: []
-                        };
-                    }
-                })
-            );
+            // Extrair famílias do /v1/me response
+            const rawFamilies = meData.families as Array<{
+                id: string;
+                name: string;
+                created_by: string;
+                role: string;
+                members?: FamilyMember[];
+            }>;
 
-            setFamilies(familiesWithMembers);
+            let userFamilies: Family[] = [];
+
+            if (Array.isArray(rawFamilies) && rawFamilies.length > 0) {
+                userFamilies = rawFamilies.map(f => ({
+                    id: f.id,
+                    name: f.name,
+                    created_by: f.created_by,
+                    created_at: '',
+                    members: f.members || []
+                }));
+            }
+
+            setFamilies(userFamilies);
 
             // Se houver famílias, selecionar automaticamente
-            if (familiesWithMembers.length > 0) {
-                // Tentar recuperar a família selecionada do localStorage
+            if (userFamilies.length > 0) {
                 const savedFamilyId = localStorage.getItem('selectedFamilyId');
-                const savedFamily = familiesWithMembers.find(f => f.id === savedFamilyId);
+                const savedFamily = userFamilies.find(f => f.id === savedFamilyId);
 
                 if (savedFamily) {
                     setSelectedFamilyState(savedFamily);
                 } else {
-                    // Se não houver família salva ou não for encontrada, selecionar a primeira
-                    setSelectedFamilyState(familiesWithMembers[0]);
-                    localStorage.setItem('selectedFamilyId', familiesWithMembers[0].id);
+                    setSelectedFamilyState(userFamilies[0]);
+                    localStorage.setItem('selectedFamilyId', userFamilies[0].id);
                 }
             } else {
                 setSelectedFamilyState(null);
                 localStorage.removeItem('selectedFamilyId');
             }
         } catch (err) {
-            const error = err as ApiError;
-            console.error('Erro ao carregar famílias:', error);
+            console.error('Erro ao carregar famílias:', err);
             setFamilies([]);
             setSelectedFamilyState(null);
+            localStorage.removeItem('selectedFamilyId');
         } finally {
             setIsLoading(false);
         }

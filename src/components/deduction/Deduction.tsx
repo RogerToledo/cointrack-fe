@@ -29,14 +29,18 @@ function Deduction() {
 
         try {
             const data = await getDeductions();
-            if (data) {
+            if (data && Array.isArray(data.message)) {
                 setDeductions(data);
+            } else {
+                setDeductions({ message: [], statusCode: 200 });
             }
 
             const earningsData = await getEarnings();
             console.log(earningsData);
-            if (earningsData) {
+            if (earningsData && Array.isArray(earningsData.message)) {
                 setEarnings(earningsData);
+            } else {
+                setEarnings({ message: [], statusCode: 200 });
             }
         } catch (err) {
             if (err instanceof Error) {
@@ -167,7 +171,7 @@ function Deduction() {
                                 <tr key={deduction.id} className="odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800 border-b dark:border-gray-700 border-gray-200">
                                     <td className="px-15 py-4">
                                         {(() => {
-                                            const earning = earnings.message.find(e => e.id === deduction.earning_id);
+                                            const earning = earnings.message?.find(e => e.id === deduction.earning_id);
                                             return earning
                                                 ? `${earning.person_name} - ${earning.description}`
                                                 : '-';
