@@ -1,5 +1,7 @@
 import { createEarning, getEarningBy, updateEarning } from '@/services/earning';
-import { Person, getPerson } from '@/services/person';
+import { Person } from '@/services/person';
+import { useFamily } from '@/contexts/FamilyContext';
+import { useAuth } from '@/contexts/AuthContext';
 import axios from 'axios';
 import { useState, useEffect } from 'react';
 import React from 'react';
@@ -23,6 +25,8 @@ const ModalEarning: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, isU
     const [ownerList, setOwnerList] = useState<Person[]>([]);
     const [success, setSuccess] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const { selectedFamily } = useFamily();
+    const { user } = useAuth();
 
     const isViewOnly = !isUpdate && earningId !== "";
 
@@ -39,9 +43,14 @@ const ModalEarning: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, isU
 
             if (isOpen) {
                 try {
-                    const personResponse = await getPerson();
-                    const meUser = personResponse.message?.user;
-                    const owners: Person[] = meUser ? [{ id: meUser.id, name: meUser.name }] : [];
+                    // Usar membros da família ou apenas o usuário logado
+                    let owners: Person[] = [];
+                    if (selectedFamily?.members && selectedFamily.members.length > 0) {
+                        owners = selectedFamily.members.map(m => ({ id: m.person_id, name: m.person_name }));
+                    } else if (user) {
+                        owners = [{ id: user.id, name: user.name }];
+                        setEarningOwner(user.id);
+                    }
                     setOwnerList(owners);
 
                     if (earningId && earningId !== "" && (isUpdate || isViewOnly)) {

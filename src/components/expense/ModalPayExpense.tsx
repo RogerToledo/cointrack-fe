@@ -11,7 +11,7 @@ interface PayModalProps {
 
 const ModalPayExpense: React.FC<PayModalProps> = ({ isOpen, onClose, onConfirm, expenseId }) => {
     const [payDate, setPayDate] = useState(new Date().toISOString().split('T')[0]);
-    const [payAmount, setPayAmount] = useState(0);
+    const [payAmount, setPayAmount] = useState('');
     const [success, setSuccess] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
 
@@ -20,7 +20,7 @@ const ModalPayExpense: React.FC<PayModalProps> = ({ isOpen, onClose, onConfirm, 
         if (!isOpen) {
             setError(null);
             setSuccess(null);
-            setPayAmount(0);
+            setPayAmount('');
         }
     }, [isOpen]);
 
@@ -28,8 +28,14 @@ const handleConfirmClick = async () => {
     setError(null);
     setSuccess(null);
 
+    const amountFloat = parseFloat(String(payAmount).replace(',', '.'));
+    if (isNaN(amountFloat) || amountFloat <= 0) {
+        setError("Informe um valor válido.");
+        return;
+    }
+
     try {
-        await onConfirm(expenseId, payAmount, payDate);
+        await onConfirm(expenseId, amountFloat, payDate);
         
         setSuccess("Pagamento realizado com sucesso!");
 
@@ -86,7 +92,10 @@ const handleConfirmClick = async () => {
                                 <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Valor Pago</label>
                                 <input 
                                     className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white" 
-                                    type="number" value={payAmount} onChange={(e) => setPayAmount(Number(e.target.value))} 
+                                    type="text" 
+                                    value={payAmount} 
+                                    onChange={(e) => setPayAmount(e.target.value)} 
+                                    placeholder="0,00"
                                 />
                             </div>
                         </div>

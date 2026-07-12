@@ -16,8 +16,8 @@ interface ModalProps {
 const ModalExpense: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, isUpdate, expenseId }) => {
     // Dentro do seu componente ModalExpense
     const [description, setDescription] = useState<string>('');
-    const [amount, setAmount] = useState<number>(0);
-    const [estimatedAmount, setEstimatedAmount] = useState<number>(0);
+    const [amount, setAmount] = useState<string>('');
+    const [estimatedAmount, setEstimatedAmount] = useState<string>('');
     const [frequency, setFrequency] = useState<string>('');
     const [dueDate, setDueDate] = useState<string>(''); // Date input espera string YYYY-MM-DD
     const [paymentDate, setPaymentDate] = useState<string>(''); 
@@ -49,11 +49,11 @@ useEffect(() => {
         try {
             // Carrega tipos de pagamento sempre
             const paymentTypeResponse = await getPaymentTypes();
-            const types = paymentTypeResponse.message || paymentTypeResponse;
+            const types = Array.isArray(paymentTypeResponse?.message) ? paymentTypeResponse.message : [];
             setPaymentTypes(types);
 
             const creditCardResponse = await getCreditCards();
-            const cards = creditCardResponse.message || creditCardResponse;
+            const cards = Array.isArray(creditCardResponse?.message) ? creditCardResponse.message : [];
             setCards(cards);
 
 
@@ -64,8 +64,8 @@ useEffect(() => {
 
                 // Preenche os campos
                 setDescription(expenseData.description || "");
-                setAmount(expenseData.amount || 0);
-                setEstimatedAmount(expenseData.estimated_amount || 0);
+                setAmount(expenseData.amount?.toString() || '');
+                setEstimatedAmount(expenseData.estimated_amount?.toString() || '');
                 setFrequency(expenseData.frequency || "");
                 setDueDate(expenseData.due_date ? expenseData.due_date.split('T')[0] : "");
                 setPaymentDate(expenseData.payment_date ? expenseData.payment_date.split('T')[0] : "");
@@ -80,8 +80,8 @@ useEffect(() => {
             } else {
                 setButtonText("Adicionar nova despesa");
                 setDescription("");
-                setAmount(0);
-                setEstimatedAmount(0);
+                setAmount('');
+                setEstimatedAmount('');
                 setFrequency("");
                 setDueDate("");
                 setPaymentDate("");
@@ -104,13 +104,16 @@ const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
+        const amountFloat = parseFloat(String(amount).replace(',', '.'));
+        const estimatedAmountFloat = parseFloat(String(estimatedAmount).replace(',', '.'));
+
         if (isUpdate) {
             await updateExpense(
                 expenseId, 
                 description, 
                 frequency,
-                amount, 
-                estimatedAmount, 
+                amountFloat, 
+                estimatedAmountFloat, 
                 dueDate, 
                 paymentDate, 
                 selectedPaymentType, 
@@ -123,8 +126,8 @@ const handleSubmit = async (e: React.FormEvent) => {
             await createExpense(
                 description, 
                 frequency, 
-                amount, 
-                estimatedAmount, 
+                amountFloat, 
+                estimatedAmountFloat, 
                 dueDate, 
                 paymentDate,
                 selectedPaymentType, 
@@ -153,10 +156,10 @@ const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
             setDescription(value);
             break;
         case 'amount':
-            setAmount(Number(value));
+            setAmount(value);
             break;
         case 'estimated_amount':
-            setEstimatedAmount(Number(value));
+            setEstimatedAmount(value);
             break;
         case 'due_date':
             setDueDate(String(value));
@@ -264,7 +267,7 @@ const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
                                             onChange={handleChange}
                                             disabled={isViewOnly}
                                             className={`bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white
-                                            ${(!isCreditCardSelected() || isViewOnly) 
+                                            ${isViewOnly 
                                                     ? 'bg-gray-200 cursor-not-allowed opacity-50 border-gray-300' 
                                                     : 'bg-gray-50 border-blue-500 focus:ring-blue-500'
                                                 }`} 
@@ -283,7 +286,7 @@ const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
                                             disabled={isViewOnly}
                                             className={`bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white
                                             ${isViewOnly ? 'bg-gray-200 cursor-not-allowed opacity-50 border-gray-300' : 'bg-gray-50 border-blue-500 focus:ring-blue-500'}`} 
-                                            placeholder="Digite o valor" 
+                                            placeholder="0,00" 
                                             required 
                                         />
                                     </div>
@@ -298,7 +301,7 @@ const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
                                             disabled={isViewOnly}
                                             className={`bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white
                                             ${isViewOnly ? 'bg-gray-200 cursor-not-allowed opacity-50 border-gray-300' : 'bg-gray-50 border-blue-500 focus:ring-blue-500'}`} 
-                                            placeholder="Digite o valor estimado" 
+                                            placeholder="0,00" 
                                             required 
                                         />
                                     </div>
