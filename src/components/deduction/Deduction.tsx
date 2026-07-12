@@ -108,7 +108,6 @@ function Deduction() {
                         <button 
                             type="button" 
                             className="text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 ml-10 dark:bg-red-500 dark:hover:bg-red-700 focus:outline-none dark:focus:ring-red-800"
-                            onClick={handleOpenNew}
                         >
                             Ganhos
                         </button> 
@@ -142,7 +141,7 @@ function Deduction() {
                 )}
                 {isEmpty && (
                     <div className="p-5 text-center text-gray-500 bg-white dark:bg-gray-800">
-                        Não existe ganho cadastrado.
+                        Não existe dedução cadastrada.
                     </div>
                 )} 
                 {!isEmpty && (

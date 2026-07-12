@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getExpensesActive, deleteExpense, reCreateExpense, payExpense, ExpensesResponse} from "@/services/expense";
+import { getExpenses, getExpensesActive, deleteExpense, reCreateExpense, payExpense, ExpensesResponse} from "@/services/expense";
 import ModalExpense from "./ModalExpense";
 import ModalPayExpense from "./ModalPayExpense";
 import axios from "axios";
@@ -30,10 +30,15 @@ function Expense() {
         setError(null);
 
         try {
-            const data = await getExpensesActive();
-            console.log("Despesas ativas carregadas:", data);
-            if (data) {
+            const data = await getExpenses();
+            console.log("Despesas carregadas:", data);
+            if (data && Array.isArray(data.message)) {
                 setExpenses(data);
+            } else if (data?.message && !Array.isArray(data.message)) {
+                // Backend pode retornar objeto único ao invés de array
+                setExpenses({ message: [data.message], statusCode: data.statusCode });
+            } else {
+                setExpenses({ message: [], statusCode: 200 });
             }
         } catch (err) {
             if (err instanceof Error) {
@@ -133,7 +138,7 @@ function Expense() {
                 >
                     Recriar Recorrente
                 </button> 
-                <h1 className="text-2xl ml-10 mt-5 mr-10 font-semibold text-gray-900 dark:text-white text-center flex-1 pr-20">Despesa</h1> 
+                <h1 className="text-2xl ml-10 mr-10 font-semibold text-gray-900 dark:text-white text-center flex-1 pr-20">Despesa</h1> 
             </div>
 
             <div className="relative overflow-x-auto mt-10 ml-10 mr-10 shadow-md sm:rounded-lg">
