@@ -4,8 +4,11 @@ import {Pencil, Trash2 } from 'lucide-react';
 import { 
     getPerson, 
     deletePerson,
+    type Person as PersonType,
     type PersonResponse
 } from "@/services/person";
+import { useFamily } from "@/contexts/FamilyContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 function Person() {
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -17,6 +20,8 @@ function Person() {
     const [error, setError] = useState<string | null>(null);
     const [isUpdate, setIsUpdate] = useState<boolean>(false);
     const [personId, setPersonId] = useState<string>("");
+    const { selectedFamily } = useFamily();
+    const { user } = useAuth();
     
     const openModal = () => setIsModalOpen(true);
     const closeModal = () => setIsModalOpen(false);
@@ -26,10 +31,19 @@ function Person() {
         setError(null);
 
         try {
-            const data = await getPerson();
-            if (data) {
-                setPersons(data);
-            }        
+            // Se tem família selecionada com membros, usar membros da família
+            if (selectedFamily?.members && selectedFamily.members.length > 0) {
+                const familyPersons: PersonType[] = selectedFamily.members.map(member => ({
+                    id: member.person_id,
+                    name: member.person_name
+                }));
+                setPersons({ message: familyPersons, statusCode: 200 });
+            } else if (user) {
+                // Se não tem família, mostrar apenas o próprio usuário
+                setPersons({ message: [{ id: user.id, name: user.name }], statusCode: 200 });
+            } else {
+                setPersons({ message: [], statusCode: 200 });
+            }
         } catch (err) {
             if (err instanceof Error) {
                 setError(err.message);

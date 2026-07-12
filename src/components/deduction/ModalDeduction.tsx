@@ -44,7 +44,11 @@ const ModalDeduction: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, i
 
         try {
             const earningResponse = await getEarnings();
-            setEarningList(earningResponse);
+            if (earningResponse && Array.isArray(earningResponse.message)) {
+                setEarningList(earningResponse);
+            } else {
+                setEarningList({ message: [], statusCode: 200 });
+            }
 
             if (deductionId && deductionId !== "" && (isUpdate || isViewOnly)) {
                 setButtonText("Atualizar Dedução");
@@ -56,7 +60,7 @@ const ModalDeduction: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, i
                 setEarningId(deductionData.earning_id || '');
 
                 // pré-selecionar o proprietário com base no ganho carregado
-                const matchedEarning = earningResponse.message.find(
+                const matchedEarning = (earningResponse?.message || []).find(
                     (e: Earning) => e.id === deductionData.earning_id
                 );
                 if (matchedEarning) setSelectedPersonId(matchedEarning.person_id);
@@ -234,7 +238,7 @@ const ModalDeduction: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, i
                                         <option value="">Escolha o proprietário</option>
                                         {Array.from(
                                             new Map(
-                                                earningList.message.map((e: Earning) => [e.person_id, e.person_name])
+                                                (earningList.message || []).map((e: Earning) => [e.person_id, e.person_name])
                                             ).entries()
                                         ).map(([personId, personName]) => (
                                             <option key={personId} value={personId}>{personName}</option>
@@ -253,7 +257,7 @@ const ModalDeduction: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, i
                                         required
                                     >
                                         <option value="">Escolha o ganho</option>
-                                        {earningList.message
+                                        {(earningList.message || [])
                                             .filter((e: Earning) => e.person_id === selectedPersonId)
                                             .map((earning: Earning) => (
                                                 <option key={earning.id} value={earning.id}>{earning.description}</option>
