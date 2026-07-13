@@ -1,8 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import ModalPerson from "./ModalPerson";
 import {Pencil, Trash2 } from 'lucide-react';
 import { 
-    getPerson, 
     deletePerson,
     type Person as PersonType,
     type PersonResponse
@@ -26,7 +25,7 @@ function Person() {
     const openModal = () => setIsModalOpen(true);
     const closeModal = () => setIsModalOpen(false);
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         setLoading(true);
         setError(null);
 
@@ -53,11 +52,11 @@ function Person() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [selectedFamily, user]);
 
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [fetchData]);
 
     const handlePerson = async () => {
         await fetchData();

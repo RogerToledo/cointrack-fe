@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { getPendingInvites, acceptInvite, rejectInvite, FamilyInvite } from '@/services/family';
 import { ApiError } from '@/types/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,7 +8,7 @@ import ModalInviteMember from './ModalInviteMember';
 
 export default function Family() {
     const { user } = useAuth();
-    const { families, selectedFamily, refreshFamilies } = useFamily();
+    const { selectedFamily, refreshFamilies } = useFamily();
     const [pendingInvites, setPendingInvites] = useState<FamilyInvite[]>([]);
     const [isModalFamilyOpen, setIsModalFamilyOpen] = useState(false);
     const [isModalInviteOpen, setIsModalInviteOpen] = useState(false);
@@ -17,7 +17,7 @@ export default function Family() {
     const [isLoading, setIsLoading] = useState(true);
     const isLoadingRef = useRef(false);
 
-    const loadFamilyData = async (force = false) => {
+    const loadFamilyData = useCallback(async (force = false) => {
         if (!user?.id) return;
         
         if (force) {
@@ -44,7 +44,7 @@ export default function Family() {
             setIsLoading(false);
             isLoadingRef.current = false;
         }
-    };
+    }, [user?.id]);
 
     useEffect(() => {
         loadFamilyData();
@@ -52,7 +52,7 @@ export default function Family() {
         return () => {
             isLoadingRef.current = false;
         };
-    }, [user?.id]);
+    }, [loadFamilyData]);
 
     const handleAcceptInvite = async (inviteId: string) => {
         try {

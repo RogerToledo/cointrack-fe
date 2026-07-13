@@ -90,7 +90,7 @@ const ModalEarning: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, isU
             }
         };
         loadInitialData();
-    }, [isOpen, isUpdate, earningId, isViewOnly]);
+    }, [isOpen, isUpdate, earningId, isViewOnly, selectedFamily?.members, user]);
 
         
     

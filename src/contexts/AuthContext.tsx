@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { useRouter } from 'next/router';
 
 interface User {
@@ -78,6 +78,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(false);
   }, []);
 
+  const logout = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('tokenExpiration');
+    }
+    setUser(null);
+    router.replace('/login');
+  }, [router]);
+
   // Verificar expiração do token periodicamente
   useEffect(() => {
     if (!user) return;
@@ -90,7 +100,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, 60000); // Verificar a cada 1 minuto
 
     return () => clearInterval(interval);
-  }, [user]);
+  }, [user, logout]);
 
   const login = (token: string, userData: User) => {
     if (typeof window !== 'undefined') {
@@ -100,16 +110,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       localStorage.setItem('tokenExpiration', expirationTime.toString());
     }
     setUser(userData);
-  };
-
-  const logout = () => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      localStorage.removeItem('tokenExpiration');
-    }
-    setUser(null);
-    router.replace('/login');
   };
 
   const updateUser = (userData: User) => {

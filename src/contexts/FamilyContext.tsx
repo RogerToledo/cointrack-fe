@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { Family, FamilyMember } from '@/services/family';
 import { getPerson } from '@/services/person';
@@ -19,7 +19,7 @@ export const FamilyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const [selectedFamily, setSelectedFamilyState] = useState<Family | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    const loadFamilies = async () => {
+    const loadFamilies = useCallback(async () => {
         if (!user?.id) {
             setIsLoading(false);
             return;
@@ -83,11 +83,11 @@ export const FamilyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [user?.id]);
 
     useEffect(() => {
         loadFamilies();
-    }, [user?.id]);
+    }, [loadFamilies]);
 
     const setSelectedFamily = (family: Family) => {
         setSelectedFamilyState(family);

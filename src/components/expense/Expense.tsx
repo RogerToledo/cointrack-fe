@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getExpenses, getExpensesActive, deleteExpense, reCreateExpense, payExpense, ExpensesResponse} from "@/services/expense";
+import { getExpenses, deleteExpense, reCreateExpense, payExpense, ExpensesResponse} from "@/services/expense";
 import ModalExpense from "./ModalExpense";
 import ModalPayExpense from "./ModalPayExpense";
 import axios from "axios";

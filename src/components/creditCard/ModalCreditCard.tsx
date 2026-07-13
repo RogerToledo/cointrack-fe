@@ -75,7 +75,7 @@ const ModalcreditCard: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, 
             }
         };
         loadInitialData();
-    }, [isOpen, isUpdate, creditCardId]);
+    }, [isOpen, isUpdate, creditCardId, selectedFamily?.members, user]);
 
         
     
