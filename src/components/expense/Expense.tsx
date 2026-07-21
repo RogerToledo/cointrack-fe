@@ -3,8 +3,7 @@ import { getExpenses, deleteExpense, reCreateExpense, payExpense, ExpensesRespon
 import ModalExpense from "./ModalExpense";
 import ModalPayExpense from "./ModalPayExpense";
 import axios from "axios";
-import {Eye, Pencil, Trash2, Wallet, X} from 'lucide-react';
-
+import { Eye, Pencil, Trash2, Wallet, X, Plus, Receipt, AlertCircle, RefreshCw, CheckCircle } from 'lucide-react';
 
 function Expense() {
     const [expenses, setExpenses] = useState<ExpensesResponse>({
@@ -35,7 +34,6 @@ function Expense() {
             if (data && Array.isArray(data.message)) {
                 setExpenses(data);
             } else if (data?.message && !Array.isArray(data.message)) {
-                // Backend pode retornar objeto único ao invés de array
                 setExpenses({ message: [data.message], statusCode: data.statusCode });
             } else {
                 setExpenses({ message: [], statusCode: 200 });
@@ -99,9 +97,7 @@ function Expense() {
         try {
             await reCreateExpense();
             await fetchData();
-
             setSuccess("Despesas recorrentes recriadas!");
-            await fetchData();
             setTimeout(() => setSuccess(null), 3000);
         } catch (err) {
             if (axios.isAxiosError(err)) {
@@ -122,155 +118,146 @@ function Expense() {
     const isEmpty = !error && (!Array.isArray(expenses?.message) || expenses.message.length === 0);
 
     return (
-        <div>
-            <div className="flex items-center mt-5">
-                <button 
-                    type="button" 
-                    className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 ml-10 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
-                    onClick={handleOpenNew}
-                >
-                    Novo
-                </button> 
-                <button 
-                    type="button" 
-                    className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 ml-10 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
-                    onClick={handleRecreateRecurring}
-                >
-                    Recriar Recorrente
-                </button> 
-                <h1 className="text-2xl ml-10 mr-10 font-semibold text-gray-900 dark:text-white text-center flex-1 pr-20">Despesa</h1> 
+        <div className="space-y-6">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-2xl font-bold text-foreground">Despesas</h1>
+                    <p className="text-muted mt-1">Gerencie suas despesas fixas e variáveis</p>
+                </div>
+                <div className="flex items-center gap-3">
+                    <button 
+                        type="button" 
+                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-card text-sm font-medium text-foreground hover:bg-secondary transition-all"
+                        onClick={handleRecreateRecurring}
+                    >
+                        <RefreshCw className="w-4 h-4" />
+                        Recriar Recorrente
+                    </button>
+                    <button 
+                        type="button" 
+                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary-hover focus:ring-4 focus:ring-primary/20 transition-all"
+                        onClick={handleOpenNew}
+                    >
+                        <Plus className="w-4 h-4" />
+                        Nova Despesa
+                    </button>
+                </div>
             </div>
 
-            <div className="relative overflow-x-auto mt-10 ml-10 mr-10 shadow-md sm:rounded-lg">
-                {success && (
-                    <div className="flex items-center p-4 mb-4 text-green-800 rounded-lg bg-green-50 dark:bg-gray-800 dark:text-green-400" role="alert">
-                        <svg className="flex-shrink-0 w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM9.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM12 15H8a1 1 0 0 1 0-2h1v-3H8a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1v4h1a1 1 0 0 1 0 2Z"/>
-                        </svg>
-                        <div className="ms-3 text-sm font-medium">
-                            {success}
-                        </div>
-                        <button 
-                            onClick={() => setSuccess(null)}
-                            type="button" 
-                            className="ms-auto -mx-1.5 -my-1.5 bg-green-50 text-green-500 rounded-lg p-1.5 hover:bg-green-200 inline-flex items-center justify-center h-8 w-8 dark:bg-gray-800 dark:text-green-400 dark:hover:bg-gray-700"
-                        >
-                            <X size={14} />
-                        </button>
+            {/* Success Alert */}
+            {success && (
+                <div className="flex items-center gap-3 p-4 rounded-xl bg-success-light border border-success/20" role="alert">
+                    <CheckCircle className="w-5 h-5 text-success flex-shrink-0" />
+                    <p className="text-sm text-success flex-1">{success}</p>
+                    <button onClick={() => setSuccess(null)} className="text-success hover:text-success/70 transition-colors">
+                        <X className="w-4 h-4" />
+                    </button>
+                </div>
+            )}
+
+            {/* Error Alert */}
+            {error && (
+                <div className="flex items-center gap-3 p-4 rounded-xl bg-danger-light border border-danger/20" role="alert">
+                    <AlertCircle className="w-5 h-5 text-danger flex-shrink-0" />
+                    <p className="text-sm text-danger flex-1">{error}</p>
+                    <button onClick={() => setError(null)} className="text-danger hover:text-danger/70 transition-colors">
+                        <X className="w-4 h-4" />
+                    </button>
+                </div>
+            )}
+
+            {/* Empty State */}
+            {isEmpty && (
+                <div className="bg-card rounded-2xl border border-border p-12 text-center">
+                    <div className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center mx-auto mb-4">
+                        <Receipt className="w-8 h-8 text-muted" />
                     </div>
-                )}
-                {error && (
-                    <div className="flex items-center p-4 mb-4 text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400" role="alert">
-                        <svg className="flex-shrink-0 w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM9.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM12 15H8a1 1 0 0 1 0-2h1v-3H8a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1v4h1a1 1 0 0 1 0 2Z"/>
-                        </svg>
-                        <span className="sr-only">Erro</span>
-                        <div className="ms-3 text-sm font-medium">
-                            {error}
-                        </div>
-                        <button 
-                            onClick={() => setError(null)}
-                            type="button" 
-                            className="ms-auto -mx-1.5 -my-1.5 bg-red-50 text-red-500 rounded-lg focus:ring-2 focus:ring-red-400 p-1.5 hover:bg-red-200 inline-flex items-center justify-center h-8 w-8 dark:bg-gray-800 dark:text-red-400 dark:hover:bg-gray-700" 
-                            aria-label="Close"
-                        >
-                            <span className="sr-only">Fechar</span>
-                            <svg className="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
-                                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
-                            </svg>
-                        </button>
-                    </div>
-                )}
-                {isEmpty && (
-                    <div className="p-5 text-center text-gray-500 bg-white dark:bg-gray-800">
-                        Não existe despesa cadastrada.
-                    </div>
-                )} 
-                {!isEmpty && (
-                    <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
-                        <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-                            <tr>
-                                <th scope="col" className="px-15 py-3">
-                                    Descrição
-                                </th>
-                                <th scope="col" className="px-6 py-3">
-                                    Valor
-                                </th>
-                                <th scope="col" className="px-6 py-3">
-                                    Frequência
-                                </th>
-                                <th scope="col" className="px-6 py-3">
-                                    Data de Vencimento
-                                </th>
-                                <th scope="col" className="px-0 py-3">
-                                    
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {expenses?.message.map((expense) => (
-                                <tr key={expense.id} className="odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800 border-b dark:border-gray-700 border-gray-200">
-                                    <td className="px-15 py-4">
-                                        {expense.description}
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        {expense.amount > 0 
-                                            ? expense.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) 
-                                            : (expense.estimated_amount ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-                                        }
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        {
-                                            expense.frequency === 'monthly' ? 'Mensal' :
-                                            expense.frequency === 'yearly' ? 'Anual' :
-                                            expense.frequency
-                                        }
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        {expense.due_date ? new Date(expense.due_date).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '-'}
-                                    </td>
-                                    <td className="px-6 py-2 text-right">
-                                        <button 
-                                            onClick={() => openPayModal(expense.id)}
-                                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                                            title="Pagar despesa"
-                                        >
-                                            <Wallet size={18} />
-                                        </button>
-                                        <button 
-                                            onClick={() => handleView(expense.id)}
-                                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                            title="Visualizar detalhes"
-                                        >
-                                            <Eye size={18} />
-                                        </button>
-                                        <button 
-                                            type="button"
-                                            onClick={ () => {
-                                                setExpenseId(expense.id);
-                                                setIsUpdate(true);
-                                                openModal();
-                                            }}
-                                            className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                                            title="Editar Despesa"
-                                        >    
-                                            <Pencil size={18} />
-                                        </button>
-                                        <button 
-                                            type="button" 
-                                            onClick={() => {handleDelete(expense.id)}}
-                                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                            title="Deletar Despesa"
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
-                                    </td>
+                    <h3 className="text-lg font-medium text-foreground mb-1">Nenhuma despesa cadastrada</h3>
+                    <p className="text-sm text-muted">Comece adicionando suas despesas mensais.</p>
+                </div>
+            )}
+
+            {/* Table */}
+            {!isEmpty && (
+                <div className="bg-card rounded-2xl border border-border overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="border-b border-border bg-secondary/50">
+                                    <th className="text-left px-6 py-4 font-semibold text-foreground">Descrição</th>
+                                    <th className="text-left px-6 py-4 font-semibold text-foreground">Valor</th>
+                                    <th className="text-left px-6 py-4 font-semibold text-foreground">Frequência</th>
+                                    <th className="text-left px-6 py-4 font-semibold text-foreground">Vencimento</th>
+                                    <th className="text-right px-6 py-4 font-semibold text-foreground">Ações</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                )}
-            </div>
+                            </thead>
+                            <tbody className="divide-y divide-border">
+                                {expenses?.message.map((expense) => (
+                                    <tr key={expense.id} className="hover:bg-secondary/30 transition-colors">
+                                        <td className="px-6 py-4 font-medium text-foreground">{expense.description}</td>
+                                        <td className="px-6 py-4 font-medium text-danger">
+                                            {expense.amount > 0 
+                                                ? expense.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) 
+                                                : (expense.estimated_amount ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                                            }
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-accent-light text-accent">
+                                                {expense.frequency === 'monthly' ? 'Mensal' :
+                                                 expense.frequency === 'yearly' ? 'Anual' :
+                                                 expense.frequency}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-muted">
+                                            {expense.due_date ? new Date(expense.due_date).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '-'}
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center justify-end gap-1">
+                                                <button 
+                                                    onClick={() => openPayModal(expense.id)}
+                                                    className="p-2 rounded-lg text-muted hover:text-success hover:bg-success-light transition-colors"
+                                                    title="Pagar despesa"
+                                                >
+                                                    <Wallet size={16} />
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleView(expense.id)}
+                                                    className="p-2 rounded-lg text-muted hover:text-primary hover:bg-primary-light transition-colors"
+                                                    title="Visualizar detalhes"
+                                                >
+                                                    <Eye size={16} />
+                                                </button>
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setExpenseId(expense.id);
+                                                        setIsUpdate(true);
+                                                        openModal();
+                                                    }}
+                                                    className="p-2 rounded-lg text-muted hover:text-warning hover:bg-warning-light transition-colors"
+                                                    title="Editar Despesa"
+                                                >    
+                                                    <Pencil size={16} />
+                                                </button>
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => handleDelete(expense.id)}
+                                                    className="p-2 rounded-lg text-muted hover:text-danger hover:bg-danger-light transition-colors"
+                                                    title="Deletar Despesa"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
             <ModalExpense 
                 isOpen={isModalOpen} 
                 onClose={closeModal}

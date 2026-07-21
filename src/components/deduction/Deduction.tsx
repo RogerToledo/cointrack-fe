@@ -3,7 +3,7 @@ import { getDeductions, deleteDeduction, DeductionsResponse} from "@/services/de
 import { getEarnings, EarningsResponse } from "@/services/earning";
 import ModalDeduction from "./ModalDeduction";
 import axios from "axios";
-import { Eye, Pencil, Trash2} from 'lucide-react';
+import { Eye, Pencil, Trash2, Plus, Receipt, AlertCircle, X } from 'lucide-react';
 import Link from 'next/link';
 
 function Deduction() {
@@ -20,7 +20,6 @@ function Deduction() {
     const [isUpdate, setIsUpdate] = useState<boolean>(false);
     const [deductionId, setDeductionId] = useState<string>("");
 
-
     const openModal = () => setIsModalOpen(true);
     const closeModal = () => setIsModalOpen(false);
 
@@ -36,7 +35,6 @@ function Deduction() {
             }
 
             const earningsData = await getEarnings();
-            console.log(earningsData);
             if (earningsData && Array.isArray(earningsData.message)) {
                 setEarnings(earningsData);
             } else {
@@ -94,132 +92,130 @@ function Deduction() {
     const isEmpty = !error && (!Array.isArray(deductions?.message) || deductions.message.length === 0);
 
     return (
-        <div>
-            <div className="flex items-center mt-5">
-                <div className="flex gap-2">
-                    <button 
-                        type="button" 
-                        className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 ml-10 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
-                        onClick={handleOpenNew}
-                    >
-                        Novo
-                    </button> 
+        <div className="space-y-6">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-2xl font-bold text-foreground">Deduções</h1>
+                    <p className="text-muted mt-1">Gerencie as deduções dos seus ganhos</p>
+                </div>
+                <div className="flex items-center gap-3">
                     <Link href="/earning">
                         <button 
                             type="button" 
-                            className="text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 ml-10 dark:bg-red-500 dark:hover:bg-red-700 focus:outline-none dark:focus:ring-red-800"
+                            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-card text-sm font-medium text-foreground hover:bg-secondary transition-all"
                         >
                             Ganhos
-                        </button> 
-                    </Link>    
-                </div>    
-                <h1 className="text-2xl ml-10 mt-5 mr-10 font-semibold text-gray-900 dark:text-white px-70 flex-1 pr-20">Deduções</h1> 
+                        </button>
+                    </Link>
+                    <button 
+                        type="button" 
+                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary-hover focus:ring-4 focus:ring-primary/20 transition-all"
+                        onClick={handleOpenNew}
+                    >
+                        <Plus className="w-4 h-4" />
+                        Nova Dedução
+                    </button>
+                </div>
             </div>
 
-            <div className="relative overflow-x-auto mt-10 ml-10 mr-10 shadow-md sm:rounded-lg">
-                {error && (
-                    <div className="flex items-center p-4 mb-4 text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400" role="alert">
-                        <svg className="flex-shrink-0 w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM9.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM12 15H8a1 1 0 0 1 0-2h1v-3H8a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1v4h1a1 1 0 0 1 0 2Z"/>
-                        </svg>
-                        <span className="sr-only">Erro</span>
-                        <div className="ms-3 text-sm font-medium">
-                            {error}
-                        </div>
-                        <button 
-                            onClick={() => setError(null)}
-                            type="button" 
-                            className="ms-auto -mx-1.5 -my-1.5 bg-red-50 text-red-500 rounded-lg focus:ring-2 focus:ring-red-400 p-1.5 hover:bg-red-200 inline-flex items-center justify-center h-8 w-8 dark:bg-gray-800 dark:text-red-400 dark:hover:bg-gray-700" 
-                            aria-label="Close"
-                        >
-                            <span className="sr-only">Fechar</span>
-                            <svg className="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
-                                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
-                            </svg>
-                        </button>
+            {/* Error Alert */}
+            {error && (
+                <div className="flex items-center gap-3 p-4 rounded-xl bg-danger-light border border-danger/20" role="alert">
+                    <AlertCircle className="w-5 h-5 text-danger flex-shrink-0" />
+                    <p className="text-sm text-danger flex-1">{error}</p>
+                    <button onClick={() => setError(null)} className="text-danger hover:text-danger/70 transition-colors">
+                        <X className="w-4 h-4" />
+                    </button>
+                </div>
+            )}
+
+            {/* Empty State */}
+            {isEmpty && (
+                <div className="bg-card rounded-2xl border border-border p-12 text-center">
+                    <div className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center mx-auto mb-4">
+                        <Receipt className="w-8 h-8 text-muted" />
                     </div>
-                )}
-                {isEmpty && (
-                    <div className="p-5 text-center text-gray-500 bg-white dark:bg-gray-800">
-                        Não existe dedução cadastrada.
-                    </div>
-                )} 
-                {!isEmpty && (
-                    <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
-                        <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-                            <tr>
-                                <th scope="col" className="px-15 py-3">
-                                    Ganho
-                                </th>
-                                <th scope="col" className="px-6 py-3">
-                                    Descrição
-                                </th>
-                                <th scope="col" className="px-6 py-3">
-                                    Valor
-                                </th>
-                                <th scope="col" className="px-6 py-3">
-                                    Ativo
-                                </th>
-                                <th scope="col" className="px-0 py-3">
-                                    
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {deductions?.message.map((deduction) => (
-                                <tr key={deduction.id} className="odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800 border-b dark:border-gray-700 border-gray-200">
-                                    <td className="px-15 py-4">
-                                        {(() => {
-                                            const earning = earnings.message?.find(e => e.id === deduction.earning_id);
-                                            return earning
-                                                ? `${earning.person_name} - ${earning.description}`
-                                                : '-';
-                                        })()}
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        {deduction.description}
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        R$ {deduction.amount}
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        {deduction.active ? 'Sim' : 'Não'}
-                                    </td>
-                                    <td className="px-6 py-2 text-right">
-                                        <button 
-                                                onClick={() => handleView(deduction.id)}
-                                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                                title="Visualizar detalhes"
-                                        >
-                                            <Eye size={18} />
-                                        </button>
-                                        <button 
-                                            type="button"
-                                            onClick={ () => {
-                                                setDeductionId(deduction.id);
-                                                setIsUpdate(true);
-                                                openModal();
-                                            }}
-                                            className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                                            title="Editar desconto"
-                                        >
-                                            <Pencil size={18} />
-                                        </button>
-                                        <button 
-                                            type="button" 
-                                            onClick={() => {handleDelete(deduction.id)}}
-                                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                title="Excluir desconto     "
-                                            >
-                                            <Trash2 size={18} />
-                                        </button>
-                                    </td>
+                    <h3 className="text-lg font-medium text-foreground mb-1">Nenhuma dedução cadastrada</h3>
+                    <p className="text-sm text-muted">Adicione deduções para calcular seu ganho líquido.</p>
+                </div>
+            )}
+
+            {/* Table */}
+            {!isEmpty && (
+                <div className="bg-card rounded-2xl border border-border overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="border-b border-border bg-secondary/50">
+                                    <th className="text-left px-6 py-4 font-semibold text-foreground">Ganho</th>
+                                    <th className="text-left px-6 py-4 font-semibold text-foreground">Descrição</th>
+                                    <th className="text-left px-6 py-4 font-semibold text-foreground">Valor</th>
+                                    <th className="text-left px-6 py-4 font-semibold text-foreground">Ativo</th>
+                                    <th className="text-right px-6 py-4 font-semibold text-foreground">Ações</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                )}
-            </div>
+                            </thead>
+                            <tbody className="divide-y divide-border">
+                                {deductions?.message.map((deduction) => (
+                                    <tr key={deduction.id} className="hover:bg-secondary/30 transition-colors">
+                                        <td className="px-6 py-4 font-medium text-foreground">
+                                            {(() => {
+                                                const earning = earnings.message?.find(e => e.id === deduction.earning_id);
+                                                return earning
+                                                    ? `${earning.person_name} - ${earning.description}`
+                                                    : '-';
+                                            })()}
+                                        </td>
+                                        <td className="px-6 py-4 text-muted">{deduction.description}</td>
+                                        <td className="px-6 py-4 font-medium text-danger">R$ {deduction.amount}</td>
+                                        <td className="px-6 py-4">
+                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                                deduction.active 
+                                                    ? 'bg-success-light text-success' 
+                                                    : 'bg-secondary text-muted'
+                                            }`}>
+                                                {deduction.active ? 'Sim' : 'Não'}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center justify-end gap-1">
+                                                <button 
+                                                    onClick={() => handleView(deduction.id)}
+                                                    className="p-2 rounded-lg text-muted hover:text-primary hover:bg-primary-light transition-colors"
+                                                    title="Visualizar detalhes"
+                                                >
+                                                    <Eye size={16} />
+                                                </button>
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setDeductionId(deduction.id);
+                                                        setIsUpdate(true);
+                                                        openModal();
+                                                    }}
+                                                    className="p-2 rounded-lg text-muted hover:text-warning hover:bg-warning-light transition-colors"
+                                                    title="Editar desconto"
+                                                >
+                                                    <Pencil size={16} />
+                                                </button>
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => handleDelete(deduction.id)}
+                                                    className="p-2 rounded-lg text-muted hover:text-danger hover:bg-danger-light transition-colors"
+                                                    title="Excluir desconto"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
             <ModalDeduction
                 isOpen={isModalOpen} 
                 onClose={closeModal} 

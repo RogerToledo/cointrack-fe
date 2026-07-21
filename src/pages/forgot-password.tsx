@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import authService from '@/services/auth';
 import { ApiError } from '@/types/api';
+import { DollarSign, Mail, ArrowLeft, CheckCircle } from 'lucide-react';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -28,57 +29,78 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen flex items-center justify-center p-6 bg-background">
       <div className="w-full max-w-md">
-        <div className="bg-white rounded-lg shadow-md dark:bg-gray-800 p-6 md:p-8">
-          <h2 className="text-2xl font-semibold text-gray-900 dark:text-white text-center mb-2">
+        {/* Logo */}
+        <div className="flex items-center gap-2 mb-8">
+          <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
+            <DollarSign className="w-6 h-6 text-white" />
+          </div>
+          <span className="text-xl font-bold text-foreground">CoinTrack</span>
+        </div>
+
+        <div className="bg-card rounded-2xl border border-border p-8 shadow-sm">
+          <h2 className="text-2xl font-bold text-foreground mb-2">
             Recuperar senha
           </h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-6">
+          <p className="text-muted mb-6">
             Digite seu email e enviaremos instruções para redefinir sua senha.
           </p>
 
           {error && (
-            <div className="mb-4 p-4 text-sm text-red-700 bg-red-100 rounded-lg dark:bg-red-200 dark:text-red-800">
-              {error}
+            <div className="mb-6 p-4 rounded-xl bg-danger-light border border-danger/20 flex items-start gap-3">
+              <div className="w-5 h-5 rounded-full bg-danger/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span className="text-danger text-xs font-bold">!</span>
+              </div>
+              <p className="text-sm text-danger">{error}</p>
             </div>
           )}
           
           {success && (
-            <div className="mb-4 p-4 text-sm text-green-700 bg-green-100 rounded-lg dark:bg-green-200 dark:text-green-800">
-              {success}
+            <div className="mb-6 p-4 rounded-xl bg-success-light border border-success/20 flex items-start gap-3">
+              <CheckCircle className="w-5 h-5 text-success flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-success">{success}</p>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+              <label htmlFor="email" className="block text-sm font-medium text-foreground mb-2">
                 Email
               </label>
-              <input
-                type="email"
-                id="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
-                placeholder="seu@email.com"
-                required
-              />
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-light" />
+                <input
+                  type="email"
+                  id="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3 rounded-xl border border-border bg-card text-foreground placeholder:text-muted-light focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                  placeholder="seu@email.com"
+                  required
+                />
+              </div>
             </div>
 
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-primary text-white font-medium hover:bg-primary-hover focus:ring-4 focus:ring-primary/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
-              {isLoading ? 'Enviando...' : 'Enviar instruções'}
+              {isLoading ? (
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                'Enviar instruções'
+              )}
             </button>
 
-            <div className="text-sm text-center">
-              <Link href="/login" className="text-blue-700 hover:underline dark:text-blue-500">
-                Voltar para login
-              </Link>
-            </div>
+            <Link 
+              href="/login" 
+              className="flex items-center justify-center gap-2 text-sm text-muted hover:text-foreground font-medium transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Voltar para login
+            </Link>
           </form>
         </div>
       </div>

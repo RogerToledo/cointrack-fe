@@ -1,8 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import ModalPurchaseType from "./ModalPurchaseType";
 import { deletePurchaseType, getPurchaseTypes, type PurchaseTypesResponse } from "@/services/purchaseType";
-import {Pencil, Trash2 } from 'lucide-react';
-
+import { Pencil, Trash2, Plus, Tag, AlertCircle, X } from 'lucide-react';
 import axios from "axios";
 
 function PurchaseType() {
@@ -71,91 +70,93 @@ function PurchaseType() {
     const isEmpty = !error && (!purchaseTypes?.message || purchaseTypes?.message?.length === 0);
 
     return (
-        <div>
-            <div className="flex items-center justify-between mt-5 mx-10">
+        <div className="space-y-6">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-2xl font-bold text-foreground">Tipo de Compra</h1>
+                    <p className="text-muted mt-1">Categorize suas compras por tipo</p>
+                </div>
                 <button 
                     type="button" 
-                    className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary-hover focus:ring-4 focus:ring-primary/20 transition-all"
                     onClick={handleOpenNew}
                 >
-                    Novo
+                    <Plus className="w-4 h-4" />
+                    Novo Tipo
                 </button>
-                <h1 className="text-2xl mt-5 font-semibold text-gray-900 dark:text-white text-center flex-1 pr-20">
-                    Tipo de Compra
-                </h1>
             </div>
-            <div className="relative overflow-x-auto mt-10 ml-10 mr-10 shadow-md sm:rounded-lg">
+
+            {/* Error Alert */}
             {error && (
-                    <div className="flex items-center p-4 mb-4 text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400" role="alert">
-                        <svg className="flex-shrink-0 w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM9.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM12 15H8a1 1 0 0 1 0-2h1v-3H8a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1v4h1a1 1 0 0 1 0 2Z"/>
-                        </svg>
-                        <span className="sr-only">Erro</span>
-                        <div className="ms-3 text-sm font-medium">
-                            {error}
-                        </div>
-                        <button 
-                            onClick={() => setError(null)}
-                            type="button" 
-                            className="ms-auto -mx-1.5 -my-1.5 bg-red-50 text-red-500 rounded-lg focus:ring-2 focus:ring-red-400 p-1.5 hover:bg-red-200 inline-flex items-center justify-center h-8 w-8 dark:bg-gray-800 dark:text-red-400 dark:hover:bg-gray-700" 
-                            aria-label="Close"
-                        >
-                            <span className="sr-only">Fechar</span>
-                            <svg className="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
-                                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
-                            </svg>
-                        </button>
+                <div className="flex items-center gap-3 p-4 rounded-xl bg-danger-light border border-danger/20" role="alert">
+                    <AlertCircle className="w-5 h-5 text-danger flex-shrink-0" />
+                    <p className="text-sm text-danger flex-1">{error}</p>
+                    <button onClick={() => setError(null)} className="text-danger hover:text-danger/70 transition-colors">
+                        <X className="w-4 h-4" />
+                    </button>
+                </div>
+            )}
+
+            {/* Empty State */}
+            {isEmpty && (
+                <div className="bg-card rounded-2xl border border-border p-12 text-center">
+                    <div className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center mx-auto mb-4">
+                        <Tag className="w-8 h-8 text-muted" />
                     </div>
-                )}
-                {isEmpty && (
-                    <div className="p-5 text-center text-gray-500 bg-white dark:bg-gray-800">
-                        Nenhum tipo de compra cadastrado.
-                    </div>
-                )}
-                {!isEmpty && (
-                    <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
-                        <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-                            <tr>
-                                <th scope="col" className="px-20 py-3">
-                                    Nome
-                                </th>
-                                <th scope="col" className="px-6 py-3"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {purchaseTypes?.message.map((message) => (
-                                <tr key={message.id} className="odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800 border-b dark:border-gray-700 border-gray-200">
-                                    <td className="px-20 py-4">
-                                        {message.name}
-                                    </td>
-                                    <td className="px-6 py-2 text-right">
-                                        <button 
-                                            type="button"
-                                            onClick={ () => {
-                                                setPurchaseTypeId(message.id);
-                                                setIsUpdate(true);
-                                                openModal();
-                                            }}
-                                            className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                                            title="Editar Tipo de Compra"
-                                        >
-                                            <Pencil size={18} />
-                                        </button>
-                                        <button 
-                                            type="button" 
-                                            onClick={() => handleDelete(message.id)}
-                                            disabled={isDeleting === message.id}
-                                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
-                                    </td>
+                    <h3 className="text-lg font-medium text-foreground mb-1">Nenhum tipo de compra cadastrado</h3>
+                    <p className="text-sm text-muted">Crie categorias para organizar suas compras.</p>
+                </div>
+            )}
+
+            {/* Table */}
+            {!isEmpty && (
+                <div className="bg-card rounded-2xl border border-border overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="border-b border-border bg-secondary/50">
+                                    <th className="text-left px-6 py-4 font-semibold text-foreground">Nome</th>
+                                    <th className="text-right px-6 py-4 font-semibold text-foreground">Ações</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                )}
-            </div>
+                            </thead>
+                            <tbody className="divide-y divide-border">
+                                {purchaseTypes?.message.map((message) => (
+                                    <tr key={message.id} className="hover:bg-secondary/30 transition-colors">
+                                        <td className="px-6 py-4 font-medium text-foreground">{message.name}</td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center justify-end gap-1">
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setPurchaseTypeId(message.id);
+                                                        setIsUpdate(true);
+                                                        openModal();
+                                                    }}
+                                                    className="p-2 rounded-lg text-muted hover:text-warning hover:bg-warning-light transition-colors"
+                                                    title="Editar Tipo de Compra"
+                                                >
+                                                    <Pencil size={16} />
+                                                </button>
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => handleDelete(message.id)}
+                                                    disabled={isDeleting === message.id}
+                                                    className="p-2 rounded-lg text-muted hover:text-danger hover:bg-danger-light transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    title="Deletar Tipo de Compra"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
             <ModalPurchaseType 
                 isOpen={isModalOpen} 
                 onClose={closeModal}

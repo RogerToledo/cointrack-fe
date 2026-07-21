@@ -1,28 +1,42 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import { useRouter } from 'next/router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFamily } from '@/contexts/FamilyContext';
-import { User, LogOut, ChevronDown, Users } from 'lucide-react';
+import { 
+    User, LogOut, ChevronDown, ChevronLeft, Users, 
+    LayoutDashboard, ShoppingCart, CreditCard, Wallet,
+    Tag, DollarSign, Receipt, Menu, UserCircle
+} from 'lucide-react';
 
-function NavBar() {
+interface NavBarProps {
+    sidebarOpen: boolean;
+    setSidebarOpen: (open: boolean) => void;
+}
+
+function NavBar({ sidebarOpen, setSidebarOpen }: NavBarProps) {
     const [isRegistrationOpen, setIsRegistrationOpen] = useState(false);
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
     const [isFamilyMenuOpen, setIsFamilyMenuOpen] = useState(false);
     const { user, isAuthenticated, logout } = useAuth();
     const { families, selectedFamily, setSelectedFamily } = useFamily();
+    const router = useRouter();
+    const userMenuRef = useRef<HTMLDivElement>(null);
+    const familyMenuRef = useRef<HTMLDivElement>(null);
 
-    const toggleRegistration = () => {
-        setIsRegistrationOpen(!isRegistrationOpen);
-    };
-
-    const toggleUserMenu = () => {
-        setIsUserMenuOpen(!isUserMenuOpen);
-    };
-
-    const toggleFamilyMenu = () => {
-        setIsFamilyMenuOpen(!isFamilyMenuOpen);
-    };
+    // Close menus on outside click
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+                setIsUserMenuOpen(false);
+            }
+            if (familyMenuRef.current && !familyMenuRef.current.contains(event.target as Node)) {
+                setIsFamilyMenuOpen(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     const handleLogout = () => {
         logout();
@@ -36,190 +50,197 @@ function NavBar() {
         }
     };
 
+    const isActive = (path: string) => router.pathname === path;
+
+    const navLinkClasses = (path: string) => 
+        `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+            isActive(path) 
+                ? 'bg-primary-light text-primary' 
+                : 'text-muted hover:bg-secondary hover:text-foreground'
+        }`;
+
     return (
-        <nav className="bg-white border-gray-200 dark:bg-gray-900 dark:border-gray-700">
-            <div className="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
-                <div className="flex">
-                    <div>
-                        <a href="#" className="flex items-center space-x-3 rtl:space-x-reverse">
-                            <Image src="https://flowbite.com/docs/images/logo.svg" className="h-8" alt="Flowbite Logo" width={32} height={32}/>
-                            <span className="self-center text-2xl font-semibold whitespace-nowrap dark:text-white">Flowbite</span>
-                        </a>
-                    </div>
-                    <div>
-                        <Link
-                            href="/purchase"
-                            className="className= ml-12 text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center me-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
-                        >
-                            <svg className="w-3.5 h-3.5 me-2" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 18 21">
-                                <path d="M15 12a1 1 0 0 0 .962-.726l2-7A1 1 0 0 0 17 3H3.77L3.175.745A1 1 0 0 0 2.208 0H1a1 1 0 0 0 0 2h.438l.6 2.255v.019l2 7 .746 2.986A3 3 0 1 0 9 17a2.966 2.966 0 0 0-.184-1h2.368c-.118.32-.18.659-.184 1a3 3 0 1 0 3-3H6.78l-.5-2H15Z"/>
-                            </svg>
-                            Compras
+        <>
+            {/* Sidebar */}
+            <aside 
+                className={`fixed top-0 left-0 z-40 h-screen bg-card border-r border-border transition-all duration-300 ease-in-out flex flex-col ${
+                    sidebarOpen ? 'w-[260px]' : 'w-[72px]'
+                }`}
+            >
+                {/* Logo / Brand */}
+                <div className="flex items-center justify-between h-16 px-4 border-b border-border">
+                    {sidebarOpen && (
+                        <Link href="/dashboard" className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+                                <DollarSign className="w-5 h-5 text-white" />
+                            </div>
+                            <span className="text-lg font-bold text-foreground">CoinTrack</span>
                         </Link>
-                    </div>
+                    )}
+                    <button 
+                        onClick={() => setSidebarOpen(!sidebarOpen)}
+                        className="p-2 rounded-lg text-muted hover:bg-secondary hover:text-foreground transition-colors"
+                        aria-label={sidebarOpen ? "Recolher menu" : "Expandir menu"}
+                    >
+                        {sidebarOpen ? <ChevronLeft className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                    </button>
                 </div>
-                
-                <div className="hidden w-full md:block md:w-auto" id="navbar-dropdown">
-                    <ul className="flex flex-col font-medium p-4 md:p-0 mt-4 border border-gray-100 rounded-lg bg-gray-50 md:space-x-8 rtl:space-x-reverse md:flex-row md:mt-0 md:border-0 md:bg-white dark:bg-gray-800 md:dark:bg-gray-900 dark:border-gray-700">
-                        <li>
-                            <Link href="/dashboard" className="block py-2 px-3 text-white bg-blue-700 rounded-sm md:bg-transparent md:text-blue-700 md:p-0 md:dark:text-blue-500 dark:bg-blue-600 md:dark:bg-transparent" aria-current="page">Home</Link>
-                        </li>
-                        <li>
+
+                {/* Navigation */}
+                <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-1">
+                    <Link href="/dashboard" className={navLinkClasses('/dashboard')}>
+                        <LayoutDashboard className="w-5 h-5 flex-shrink-0" />
+                        {sidebarOpen && <span>Dashboard</span>}
+                    </Link>
+
+                    <Link href="/purchase" className={navLinkClasses('/purchase')}>
+                        <ShoppingCart className="w-5 h-5 flex-shrink-0" />
+                        {sidebarOpen && <span>Compras</span>}
+                    </Link>
+
+                    <Link href="/expense" className={navLinkClasses('/expense')}>
+                        <Receipt className="w-5 h-5 flex-shrink-0" />
+                        {sidebarOpen && <span>Despesas</span>}
+                    </Link>
+
+                    <Link href="/earning" className={navLinkClasses('/earning')}>
+                        <DollarSign className="w-5 h-5 flex-shrink-0" />
+                        {sidebarOpen && <span>Ganhos</span>}
+                    </Link>
+
+                    {/* Cadastro Section */}
+                    {sidebarOpen && (
+                        <div className="pt-4">
                             <button
-                                id="dropdownNavbarLink"
-                                className="flex items-center justify-between w-full py-2 px-3 text-gray-900 rounded-sm hover:bg-gray-100 md:hover:bg-transparent md:border-0 md:hover:text-blue-700 md:p-0 md:w-auto dark:text-white md:dark:hover:text-blue-500 dark:focus:text-white dark:border-gray-700 dark:hover:bg-gray-700 md:dark:hover:bg-transparent"
-                                onClick={toggleRegistration}
+                                onClick={() => setIsRegistrationOpen(!isRegistrationOpen)}
+                                className="flex items-center justify-between w-full px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-light hover:text-muted"
                             >
-                                Cadastro
-                                <svg className="w-2.5 h-2.5 ms-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6">
-                                    <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 1 4 4 4-4"/>
-                                </svg>
+                                <span>Cadastros</span>
+                                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isRegistrationOpen ? 'rotate-180' : ''}`} />
                             </button>
-                            {/* Dropdown menu */}
-                                <div
-                                    id="dropdownNavbar"
-                                    className={`${isRegistrationOpen ? 'block' : 'hidden'} absolute z-10 font-normal bg-white divide-y divide-gray-100 rounded-lg shadow-sm w-44 dark:bg-gray-700 dark:divide-gray-600`}
-                                >
-                                    <ul className="py-2 text-sm text-gray-700 dark:text-gray-400" aria-labelledby="dropdownLargeButton">
-                                        <li>
-                                            <Link 
-                                                href="/creditCard" 
-                                                onClick={toggleRegistration}
-                                                className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">
-                                                    Cartão de Crédito
-                                                </Link>
-                                        </li>
-                                        <li>
-                                            <Link 
-                                                href="/purchaseType" 
-                                                onClick={toggleRegistration}
-                                                className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">
-                                                    Tipo de Compra
-                                            </Link>
-                                        </li>
-                                        <li>
-                                            <Link 
-                                                href="/paymentType" 
-                                                onClick={toggleRegistration}
-                                                className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">
-                                                    Tipo de Pagamento
-                                            </Link>
-                                        </li>
-                                        <li>
-                                            <Link 
-                                                href="/earning" 
-                                                onClick={toggleRegistration}
-                                                className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">
-                                                    Ganho
-                                            </Link>
-                                        </li>
-                                        <li>
-                                            <Link 
-                                                href="/expense" 
-                                                onClick={toggleRegistration}
-                                                className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">
-                                                    Despesa
-                                            </Link>
-                                        </li>
-                                    </ul>
+                        </div>
+                    )}
+
+                    {(isRegistrationOpen || !sidebarOpen) && (
+                        <div className="space-y-1">
+                            <Link href="/creditCard" className={navLinkClasses('/creditCard')}>
+                                <CreditCard className="w-5 h-5 flex-shrink-0" />
+                                {sidebarOpen && <span>Cartão de Crédito</span>}
+                            </Link>
+
+                            <Link href="/purchaseType" className={navLinkClasses('/purchaseType')}>
+                                <Tag className="w-5 h-5 flex-shrink-0" />
+                                {sidebarOpen && <span>Tipo de Compra</span>}
+                            </Link>
+
+                            <Link href="/paymentType" className={navLinkClasses('/paymentType')}>
+                                <Wallet className="w-5 h-5 flex-shrink-0" />
+                                {sidebarOpen && <span>Tipo de Pagamento</span>}
+                            </Link>
+                        </div>
+                    )}
+
+                    {sidebarOpen && (
+                        <div className="pt-4">
+                            <span className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-light">
+                                Social
+                            </span>
+                        </div>
+                    )}
+
+                    <Link href="/family" className={navLinkClasses('/family')}>
+                        <Users className="w-5 h-5 flex-shrink-0" />
+                        {sidebarOpen && <span>Família</span>}
+                    </Link>
+                </nav>
+
+                {/* Bottom section: Family selector + User */}
+                <div className="border-t border-border p-3 space-y-2">
+                    {/* Family Selector */}
+                    {isAuthenticated && families.length > 0 && sidebarOpen && (
+                        <div className="relative" ref={familyMenuRef}>
+                            <button
+                                onClick={() => setIsFamilyMenuOpen(!isFamilyMenuOpen)}
+                                className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm text-muted hover:bg-secondary hover:text-foreground transition-colors"
+                            >
+                                <Users className="w-4 h-4 flex-shrink-0" />
+                                <span className="truncate flex-1 text-left">
+                                    {selectedFamily ? selectedFamily.name : 'Selecione família'}
+                                </span>
+                                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isFamilyMenuOpen ? 'rotate-180' : ''}`} />
+                            </button>
+                            {isFamilyMenuOpen && (
+                                <div className="absolute bottom-full left-0 mb-1 w-full bg-card rounded-lg border border-border shadow-lg overflow-hidden z-50">
+                                    {families.map((family) => (
+                                        <button
+                                            key={family.id}
+                                            onClick={() => handleFamilyChange(family.id)}
+                                            className={`flex items-center gap-2 w-full px-3 py-2 text-sm text-left transition-colors ${
+                                                selectedFamily?.id === family.id 
+                                                    ? 'bg-primary-light text-primary' 
+                                                    : 'text-foreground hover:bg-secondary'
+                                            }`}
+                                        >
+                                            <Users className="w-4 h-4" />
+                                            <span className="truncate">{family.name}</span>
+                                            {selectedFamily?.id === family.id && (
+                                                <svg className="w-4 h-4 ml-auto text-primary" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                </svg>
+                                            )}
+                                        </button>
+                                    ))}
                                 </div>
-                        </li>
-                        <li>
-                            <a href="#" className="block py-2 px-3 text-gray-900 rounded-sm hover:bg-gray-100 md:hover:bg-transparent md:border-0 md:hover:text-blue-700 md:p-0 dark:text-white md:dark:hover:text-blue-500 dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent">Relatórios</a>
-                        </li>
-                        <li>
-                            <Link href="/family" className="block py-2 px-3 text-gray-900 rounded-sm hover:bg-gray-100 md:hover:bg-transparent md:border-0 md:hover:text-blue-700 md:p-0 dark:text-white md:dark:hover:text-blue-500 dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent">Família</Link>
-                        </li>
-                        
-                        {/* Dropdown de Famílias */}
-                        {isAuthenticated && families.length > 0 && (
-                            <li className="relative">
-                                <button
-                                    id="familyMenuButton"
-                                    className="flex items-center justify-between w-full py-2 px-3 text-gray-900 rounded-sm hover:bg-gray-100 md:hover:bg-transparent md:border-0 md:hover:text-blue-700 md:p-0 md:w-auto dark:text-white md:dark:hover:text-blue-500 dark:focus:text-white dark:border-gray-700 dark:hover:bg-gray-700 md:dark:hover:bg-transparent"
-                                    onClick={toggleFamilyMenu}
-                                >
-                                    <Users className="w-4 h-4 me-2" />
-                                    {selectedFamily ? selectedFamily.name : 'Selecione'}
-                                    <ChevronDown className="w-3 h-3 ms-2" />
-                                </button>
-                                {/* Family Dropdown menu */}
-                                <div
-                                    id="familyDropdown"
-                                    className={`${isFamilyMenuOpen ? 'block' : 'hidden'} absolute right-0 z-10 font-normal bg-white divide-y divide-gray-100 rounded-lg shadow-sm w-48 dark:bg-gray-700 dark:divide-gray-600`}
-                                >
-                                    <ul className="py-2 text-sm text-gray-700 dark:text-gray-400">
-                                        {families.map((family) => (
-                                            <li key={family.id}>
-                                                <button
-                                                    onClick={() => handleFamilyChange(family.id)}
-                                                    className={`flex items-center w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white ${
-                                                        selectedFamily?.id === family.id ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' : ''
-                                                    }`}
-                                                >
-                                                    <Users className="w-4 h-4 me-2" />
-                                                    {family.name}
-                                                    {selectedFamily?.id === family.id && (
-                                                        <svg className="w-4 h-4 ms-auto" fill="currentColor" viewBox="0 0 20 20">
-                                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                                        </svg>
-                                                    )}
-                                                </button>
-                                            </li>
-                                        ))}
-                                    </ul>
+                            )}
+                        </div>
+                    )}
+
+                    {/* User Menu */}
+                    {isAuthenticated ? (
+                        <div className="relative" ref={userMenuRef}>
+                            <button
+                                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                                className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-secondary transition-colors"
+                            >
+                                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                                    <UserCircle className="w-5 h-5 text-primary" />
                                 </div>
-                            </li>
-                        )}
-                        
-                        {isAuthenticated ? (
-                            <li className="relative">
-                                <button
-                                    id="userMenuButton"
-                                    className="flex items-center justify-between w-full py-2 px-3 text-gray-900 rounded-sm hover:bg-gray-100 md:hover:bg-transparent md:border-0 md:hover:text-blue-700 md:p-0 md:w-auto dark:text-white md:dark:hover:text-blue-500 dark:focus:text-white dark:border-gray-700 dark:hover:bg-gray-700 md:dark:hover:bg-transparent"
-                                    onClick={toggleUserMenu}
-                                >
-                                    <User className="w-4 h-4 me-2" />
-                                    {user?.name}
-                                    <ChevronDown className="w-3 h-3 ms-2" />
-                                </button>
-                                {/* User Dropdown menu */}
-                                <div
-                                    id="userDropdown"
-                                    className={`${isUserMenuOpen ? 'block' : 'hidden'} absolute right-0 z-10 font-normal bg-white divide-y divide-gray-100 rounded-lg shadow-sm w-44 dark:bg-gray-700 dark:divide-gray-600`}
-                                >
-                                    <ul className="py-2 text-sm text-gray-700 dark:text-gray-400">
-                                        <li>
-                                            <Link 
-                                                href="/profile" 
-                                                onClick={toggleUserMenu}
-                                                className="flex items-center px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">
-                                                <User className="w-4 h-4 me-2" />
-                                                Meu Perfil
-                                            </Link>
-                                        </li>
-                                        <li>
-                                            <button
-                                                onClick={handleLogout}
-                                                className="flex items-center w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">
-                                                <LogOut className="w-4 h-4 me-2" />
-                                                Sair
-                                            </button>
-                                        </li>
-                                    </ul>
+                                {sidebarOpen && (
+                                    <div className="flex-1 text-left min-w-0">
+                                        <p className="text-sm font-medium text-foreground truncate">{user?.name}</p>
+                                        <p className="text-xs text-muted truncate">{user?.email}</p>
+                                    </div>
+                                )}
+                            </button>
+                            {isUserMenuOpen && (
+                                <div className="absolute bottom-full left-0 mb-1 w-full bg-card rounded-lg border border-border shadow-lg overflow-hidden z-50">
+                                    <Link 
+                                        href="/profile" 
+                                        onClick={() => setIsUserMenuOpen(false)}
+                                        className="flex items-center gap-2 px-3 py-2.5 text-sm text-foreground hover:bg-secondary transition-colors"
+                                    >
+                                        <User className="w-4 h-4" />
+                                        Meu Perfil
+                                    </Link>
+                                    <button
+                                        onClick={handleLogout}
+                                        className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-danger hover:bg-danger-light transition-colors"
+                                    >
+                                        <LogOut className="w-4 h-4" />
+                                        Sair
+                                    </button>
                                 </div>
-                            </li>
-                        ) : (
-                            <li>
-                                <Link href="/login" className="block py-2 px-3 text-gray-900 rounded-sm hover:bg-gray-100 md:hover:bg-transparent md:border-0 md:hover:text-blue-700 md:p-0 dark:text-white md:dark:hover:text-blue-500 dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent">
-                                    Login
-                                </Link>
-                            </li>
-                        )}
-                    </ul>
+                            )}
+                        </div>
+                    ) : (
+                        <Link href="/login" className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm text-muted hover:bg-secondary hover:text-foreground transition-colors">
+                            <User className="w-5 h-5" />
+                            {sidebarOpen && <span>Login</span>}
+                        </Link>
+                    )}
                 </div>
-            </div>
-        </nav>
+            </aside>
+        </>
     );
 }
 

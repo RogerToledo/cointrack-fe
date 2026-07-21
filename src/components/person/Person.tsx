@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import ModalPerson from "./ModalPerson";
-import {Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, Plus, Users, AlertCircle } from 'lucide-react';
 import { 
     deletePerson,
     type Person as PersonType,
@@ -30,7 +30,6 @@ function Person() {
         setError(null);
 
         try {
-            // Se tem família selecionada com membros, usar membros da família
             if (selectedFamily?.members && selectedFamily.members.length > 0) {
                 const familyPersons: PersonType[] = selectedFamily.members.map(member => ({
                     id: member.person_id,
@@ -38,7 +37,6 @@ function Person() {
                 }));
                 setPersons({ message: familyPersons, statusCode: 200 });
             } else if (user) {
-                // Se não tem família, mostrar apenas o próprio usuário
                 setPersons({ message: [{ id: user.id, name: user.name }], statusCode: 200 });
             } else {
                 setPersons({ message: [], statusCode: 200 });
@@ -64,7 +62,7 @@ function Person() {
     }
 
     const handleDelete = async (id: string) => {
-        if (!window.confirm('Tem certeza que deseja deletar este tipo de compra?')) {
+        if (!window.confirm('Tem certeza que deseja deletar esta pessoa?')) {
             return;
         }
         try {
@@ -84,84 +82,97 @@ function Person() {
     const isEmpty = !loading && !error && (!persons?.message || persons.message.length === 0);
 
     return (
-        <div>
-            <div className="flex items-center mt-5">
+        <div className="space-y-6">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-2xl font-bold text-foreground">Pessoas</h1>
+                    <p className="text-muted mt-1">Gerencie as pessoas vinculadas</p>
+                </div>
                 <button
                     type="button"
-                    className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 ml-10 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary-hover focus:ring-4 focus:ring-primary/20 transition-all"
                     onClick={handleOpenNew}
                 >
-                    Novo
+                    <Plus className="w-4 h-4" />
+                    Nova Pessoa
                 </button>
-                <h1 className="text-2xl mt-5 font-semibold text-gray-900 dark:text-white text-center flex-1 pr-20">Pessoa</h1>
-            </div>       
-            <div className="relative overflow-x-auto mt-10 ml-10 mr-10 shadow-md sm:rounded-lg">
-                {loading && (
-                    <div className="p-5 text-center text-gray-500 bg-white dark:bg-gray-800">
-                        Carregando...
-                    </div>
-                )}
-                {error && (
-                    <div className="p-5 text-center text-gray-500 bg-white dark:bg-gray-800">
-                        Error: {error}
-                    </div>
-                )}
-                {isEmpty && (
-                    <div className="p-5 text-center text-gray-500 bg-white dark:bg-gray-800">
-                        Nenhum pessoa cadastrada.
-                    </div>
-                )}
-                {!loading && !error && !isEmpty &&  (
-                    <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
-                        <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-                            <tr>
-                                <th scope="col" className="px-15 py-3">
-                                    Nome
-                                </th>
-                                <th scope="col" className="px-6 py-3"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {persons?.message?.map((message) => (
-                                <tr
-                                    key={message.id}
-                                    className="odd:bg-white odd:dark:bg-gray-900 even:bg-gray-500 even:dark:bg-gray-800 border-b dark:border-gray-700 border-gray-200"
-                                >
-                                    <td className="px-15 py-4">{message.name}</td>
-                                    <td className="px-5 py-2 text-right">
-                                        <button 
-                                            type="button"
-                                            onClick={ () => {
-                                                setPersonId(message.id);
-                                                setIsUpdate(true);
-                                                openModal();
-                                            }}
-                                            className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                                            title="Editar Pessoa"
-                                        >    
-                                            <Pencil size={18} />
-                                        </button>
-                                        <button 
-                                            type="button" 
-                                            onClick={ async () => { 
-                                                try {
-                                                    handleDelete(message.id);
-                                                } catch (error) {
-                                                    console.error(error);
-                                                }
-                                            }}
-                                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                            title="Deletar Pessoa"
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                )}
             </div>
+
+            {/* Error Alert */}
+            {error && (
+                <div className="flex items-center gap-3 p-4 rounded-xl bg-danger-light border border-danger/20" role="alert">
+                    <AlertCircle className="w-5 h-5 text-danger flex-shrink-0" />
+                    <p className="text-sm text-danger flex-1">{error}</p>
+                </div>
+            )}
+
+            {/* Loading State */}
+            {loading && (
+                <div className="bg-card rounded-2xl border border-border p-12 text-center">
+                    <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-4" />
+                    <p className="text-sm text-muted">Carregando...</p>
+                </div>
+            )}
+
+            {/* Empty State */}
+            {isEmpty && (
+                <div className="bg-card rounded-2xl border border-border p-12 text-center">
+                    <div className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center mx-auto mb-4">
+                        <Users className="w-8 h-8 text-muted" />
+                    </div>
+                    <h3 className="text-lg font-medium text-foreground mb-1">Nenhuma pessoa cadastrada</h3>
+                    <p className="text-sm text-muted">Adicione pessoas para vincular às compras e ganhos.</p>
+                </div>
+            )}
+
+            {/* Table */}
+            {!loading && !error && !isEmpty && (
+                <div className="bg-card rounded-2xl border border-border overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="border-b border-border bg-secondary/50">
+                                    <th className="text-left px-6 py-4 font-semibold text-foreground">Nome</th>
+                                    <th className="text-right px-6 py-4 font-semibold text-foreground">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border">
+                                {persons?.message?.map((message) => (
+                                    <tr key={message.id} className="hover:bg-secondary/30 transition-colors">
+                                        <td className="px-6 py-4 font-medium text-foreground">{message.name}</td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center justify-end gap-1">
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setPersonId(message.id);
+                                                        setIsUpdate(true);
+                                                        openModal();
+                                                    }}
+                                                    className="p-2 rounded-lg text-muted hover:text-warning hover:bg-warning-light transition-colors"
+                                                    title="Editar Pessoa"
+                                                >    
+                                                    <Pencil size={16} />
+                                                </button>
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => handleDelete(message.id)}
+                                                    className="p-2 rounded-lg text-muted hover:text-danger hover:bg-danger-light transition-colors"
+                                                    title="Deletar Pessoa"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
             <ModalPerson 
                 isOpen={isModalOpen} 
                 onClose={closeModal} 
