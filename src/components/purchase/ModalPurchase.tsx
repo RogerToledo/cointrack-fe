@@ -60,7 +60,7 @@ const ModalPurchaseType: React.FC<ModalProps> = ({ isOpen, onClose, onPurchaseAc
     const [isSaving, setIsSaving] = useState(false);
     const [success, setSuccess] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const { selectedFamily } = useFamily();
+    const { selectedFamily, isLoading: isFamilyLoading } = useFamily();
     const { user } = useAuth();
 
     const isViewOnly = !isUpdate && purchaseId !== null;
@@ -117,17 +117,21 @@ const ModalPurchaseType: React.FC<ModalProps> = ({ isOpen, onClose, onPurchaseAc
                 getPurchaseTypes()
             ]);
 
-            // Se tem família selecionada com membros, listar membros da família
-            if (selectedFamily?.members && selectedFamily.members.length > 0) {
-                const familyPersons = selectedFamily.members.map(member => ({
-                    id: member.person_id,
-                    name: member.person_name
-                }));
-                setPersons(familyPersons);
-            } else if (user) {
-                // Se não tem família, setar apenas o próprio usuário e pré-selecionar
-                setPersons([{ id: user.id, name: user.name }]);
-                setFormData(prev => ({ ...prev, person: user.id }));
+            // Só define as pessoas e o fallback se não estiver carregando as informações de família
+            if (!isFamilyLoading) {
+                if (selectedFamily?.members && selectedFamily.members.length > 0) {
+                    const familyPersons = selectedFamily.members.map(member => ({
+                        id: member.person_id,
+                        name: member.person_name
+                    }));
+                    setPersons(familyPersons);
+                } else if (user) {
+                    // Se não tem família, setar apenas o próprio usuário e pré-selecionar (somente para nova compra)
+                    setPersons([{ id: user.id, name: user.name }]);
+                    if (!purchaseId) {
+                        setFormData(prev => ({ ...prev, person: user.id }));
+                    }
+                }
             }
 
             setPaymentType(Array.isArray(paymentTypesData.message) ? paymentTypesData.message : []);
@@ -136,7 +140,7 @@ const ModalPurchaseType: React.FC<ModalProps> = ({ isOpen, onClose, onPurchaseAc
         } catch (error) {
             console.error("Error fetching metadata", error);
         }
-    }, [selectedFamily, user]);
+    }, [selectedFamily, isFamilyLoading, user, purchaseId]);
 
     useEffect(() => {
         if (isOpen) { fetchMetadata(); }

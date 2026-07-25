@@ -77,9 +77,8 @@ export const FamilyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             }
         } catch (err) {
             console.error('Erro ao carregar famílias:', err);
-            setFamilies([]);
-            setSelectedFamilyState(null);
-            localStorage.removeItem('selectedFamilyId');
+            // Mantém os estados populados anteriores para não quebrar a navegação
+            // em caso de oscilações ou falhas temporárias na API.
         } finally {
             setIsLoading(false);
         }
