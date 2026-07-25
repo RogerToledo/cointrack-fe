@@ -25,6 +25,7 @@ interface Person {
 interface PaymentType {
     id: string;
     name: string;
+    spot_payment: number;
 }
 
 interface Card {
@@ -162,6 +163,10 @@ const ModalPurchaseType: React.FC<ModalProps> = ({ isOpen, onClose, onPurchaseAc
                 if (!isCard) {
                     newData.credit_card = "";
                 }
+
+                if (selected?.spot_payment === 0) {
+                    newData.installment_number = 0;
+                }
             }
             console.log("DEBUG - Form data updated:", newData);
             return newData;
@@ -235,6 +240,11 @@ const ModalPurchaseType: React.FC<ModalProps> = ({ isOpen, onClose, onPurchaseAc
     const isCreditCardSelected = () => {
         const selectedType = (paymentTypes ?? []).find(pt => pt.id === formData.payment_type);
         return selectedType?.name?.toLowerCase().includes("cartão de crédito") ?? false;
+    }
+
+    const isSpotPaymentSelected = () => {
+        const selectedType = (paymentTypes ?? []).find(pt => pt.id === formData.payment_type);
+        return selectedType?.spot_payment === 0;
     }
 
     if (!isOpen) {
@@ -363,9 +373,9 @@ const ModalPurchaseType: React.FC<ModalProps> = ({ isOpen, onClose, onPurchaseAc
                                         name="installment_number" 
                                         value={formData.installment_number} 
                                         onChange={handleChange} 
-                                        disabled={isViewOnly}
+                                        disabled={isViewOnly || isSpotPaymentSelected()}
                                         required 
-                                        className="w-full p-2.5 bg-gray-50 border rounded-lg dark:bg-gray-600 dark:text-white"
+                                        className={`w-full p-2.5 bg-gray-50 border rounded-lg dark:bg-gray-600 dark:text-white ${isSpotPaymentSelected() ? 'bg-gray-200 cursor-not-allowed opacity-50' : 'bg-gray-50 border-gray-300'}`}
                                     />
                                 </div>
                             </div>
