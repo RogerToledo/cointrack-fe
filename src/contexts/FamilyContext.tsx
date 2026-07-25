@@ -14,7 +14,7 @@ interface FamilyContextType {
 const FamilyContext = createContext<FamilyContextType | undefined>(undefined);
 
 export const FamilyProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const { user } = useAuth();
+    const { user, updateUser } = useAuth();
     const [families, setFamilies] = useState<Family[]>([]);
     const [selectedFamily, setSelectedFamilyState] = useState<Family | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -35,6 +35,15 @@ export const FamilyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
                 setSelectedFamilyState(null);
                 localStorage.removeItem('selectedFamilyId');
                 return;
+            }
+
+            // Atualizar os dados do usuário no contexto com os dados reais do banco
+            if (meData.user) {
+                updateUser({
+                    id: meData.user.id,
+                    name: meData.user.name,
+                    email: meData.user.email
+                });
             }
 
             // Extrair famílias do /v1/me response
@@ -82,7 +91,7 @@ export const FamilyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         } finally {
             setIsLoading(false);
         }
-    }, [user?.id]);
+    }, [user?.id, updateUser]);
 
     useEffect(() => {
         loadFamilies();

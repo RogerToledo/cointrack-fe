@@ -112,12 +112,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setUser(userData);
   };
 
-  const updateUser = (userData: User) => {
+  const updateUser = useCallback((userData: User) => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('user', JSON.stringify(userData));
     }
     setUser(userData);
-  };
+  }, []);
 
   const value = {
     user,
