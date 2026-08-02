@@ -75,7 +75,7 @@ const ModalcreditCard: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, 
                         setInvoiceCloseDay(cardData.invoice_closing_day);
                         setDueDate(cardData.due_date);
                         setCardName(cardData.card_name || '');
-                        setParentCardId(cardData.parent_card_id || '');
+                        setParentCardId(cardData.physical_card_id || '');
                     } else {
                         setTitle("Cadastro de Cartão de Crédito");
                         setButtonText("Adicionar novo cartão de crédito");
