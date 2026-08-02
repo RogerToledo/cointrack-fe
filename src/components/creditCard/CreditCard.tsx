@@ -118,8 +118,9 @@ function CreditCard() {
                             <thead>
                                 <tr className="border-b border-border bg-secondary/50">
                                     <th className="text-left px-6 py-4 font-semibold text-foreground">Proprietário</th>
+                                    <th className="text-left px-6 py-4 font-semibold text-foreground">Nome</th>
                                     <th className="text-left px-6 py-4 font-semibold text-foreground">Cartão Final</th>
-                                    <th className="text-left px-6 py-4 font-semibold text-foreground">Tipo</th>
+                                    <th className="text-left px-6 py-4 font-semibold text-foreground">Cartão Físico</th>
                                     <th className="text-left px-6 py-4 font-semibold text-foreground">Fechamento</th>
                                     <th className="text-left px-6 py-4 font-semibold text-foreground">Vencimento</th>
                                     <th className="text-right px-6 py-4 font-semibold text-foreground">Ações</th>
@@ -129,12 +130,17 @@ function CreditCard() {
                                 {creditCards?.message.map((card) => (
                                     <tr key={card.id} className="hover:bg-secondary/30 transition-colors">
                                         <td className="px-6 py-4 font-medium text-foreground">{card.owner}</td>
+                                        <td className="px-6 py-4 text-muted">{card.card_name || '-'}</td>
                                         <td className="px-6 py-4 text-muted">
                                             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-secondary text-xs font-mono font-medium text-foreground">
                                                 •••• {card.final_card_num}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 text-muted">{card.type}</td>
+                                        <td className="px-6 py-4 text-muted">
+                                            {card.physical_card_last4 
+                                                ? <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-secondary text-xs font-mono font-medium text-foreground">•••• {card.physical_card_last4}</span>
+                                                : '-'}
+                                        </td>
                                         <td className="px-6 py-4 text-muted">Dia {card.invoice_closing_day}</td>
                                         <td className="px-6 py-4 text-muted">Dia {card.due_date}</td>
                                         <td className="px-6 py-4">
