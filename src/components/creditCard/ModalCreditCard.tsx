@@ -1,4 +1,4 @@
-import { createCreditCard, getCreditCard, updateCreditCard } from '@/services/creditCard';
+import { createCreditCard, getCreditCard, getPhysicalCreditCards, updateCreditCard, CreditCard } from '@/services/creditCard';
 import { Person } from '@/services/person';
 import { useFamily } from '@/contexts/FamilyContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -23,11 +23,18 @@ const ModalcreditCard: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, 
     const [type, setType] = useState('');
     const [invoiceCloseDay, setInvoiceCloseDay] = useState(0);
     const [dueDate, setDueDate] = useState(0);
+    const [cardName, setCardName] = useState('');
+    const [parentCardId, setParentCardId] = useState('');
+    const [physicalCards, setPhysicalCards] = useState<CreditCard[]>([]);
     const [ownerList, setOwnerList] = useState<Person[]>([]);
     const [success, setSuccess] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const { selectedFamily } = useFamily();
     const { user } = useAuth();
+
+    const isVirtualType = type === 'V' || type === 'VT';
+    const showCardName = type === 'V';
+    const showParentCard = type === 'V' || type === 'VT';
 
     useEffect(() => {
         const loadInitialData = async () => {
@@ -43,6 +50,19 @@ const ModalcreditCard: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, 
                         setCardOwner(user.id);
                     }
                     setOwnerList(owners);
+
+                    // Carregar cartões físicos para o select de cartão pai
+                    try {
+                        const cardsResponse = await getPhysicalCreditCards();
+                        if (cardsResponse?.message && Array.isArray(cardsResponse.message)) {
+                            setPhysicalCards(cardsResponse.message);
+                        } else {
+                            setPhysicalCards([]);
+                        }
+                    } catch {
+                        setPhysicalCards([]);
+                    }
+
                     if (isUpdate && creditCardId) {
                         setTitle("Atualização do Cartão de Crédito");
                         setButtonText("Atualizar Cartão de Crédito");
@@ -53,10 +73,15 @@ const ModalcreditCard: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, 
                         setFinalCardNum(cardData.final_card_num);
                         setType(cardData.type);
                         setInvoiceCloseDay(cardData.invoice_closing_day);
+                        setDueDate(cardData.due_date);
+                        setCardName(cardData.card_name || '');
+                        setParentCardId(cardData.parent_card_id || '');
                     } else {
                         setTitle("Cadastro de Cartão de Crédito");
                         setButtonText("Adicionar novo cartão de crédito");
-                        setCardOwner(""); setFinalCardNum(""); setType(""); setInvoiceCloseDay(0); setDueDate(0);
+                        setCardOwner(""); setFinalCardNum(""); setType(""); 
+                        setInvoiceCloseDay(0); setDueDate(0);
+                        setCardName(""); setParentCardId("");
                     }
                 } catch (error) {
                     console.error("Error fetching card owners", error);
@@ -72,12 +97,34 @@ const ModalcreditCard: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, 
         if (!cardOwner || cardOwner === "" || cardOwner === "00000000-0000-0000-0000-000000000000") {
             setError("Por favor, selecione um proprietário válido."); return;
         }
+        if (isVirtualType && !parentCardId) {
+            setError("Por favor, selecione o cartão físico vinculado."); return;
+        }
+
+        // Definir card_name automático por tipo
+        let resolvedCardName: string | undefined = undefined;
+        if (type === 'F') {
+            resolvedCardName = 'Físico';
+        } else if (type === 'VT') {
+            resolvedCardName = 'Temporário';
+        } else if (type === 'V') {
+            resolvedCardName = cardName || undefined;
+        }
+
         try {
             if (isUpdate) {
-                await updateCreditCard(creditCardId, cardOwner, finalCardNum, type, invoiceCloseDay, dueDate);
+                await updateCreditCard(
+                    creditCardId, cardOwner, finalCardNum, type, invoiceCloseDay, dueDate,
+                    resolvedCardName,
+                    showParentCard ? parentCardId : undefined
+                );
                 setSuccess("Cartão de crédito atualizado com sucesso!");
             } else {
-                await createCreditCard(cardOwner, finalCardNum, type, invoiceCloseDay, dueDate);
+                await createCreditCard(
+                    cardOwner, finalCardNum, type, invoiceCloseDay, dueDate,
+                    resolvedCardName,
+                    showParentCard ? parentCardId : undefined
+                );
                 setSuccess("Cartão de crédito criado com sucesso!");
             }
             setTimeout(() => { onCardAction(); onClose(); }, 2000);  
@@ -97,6 +144,8 @@ const ModalcreditCard: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, 
             case 'Type': setType(value); break;
             case 'InvoiceClosingDay': setInvoiceCloseDay(Number(value)); break;
             case 'DueDate': setDueDate(Number(value)); break;
+            case 'CardName': setCardName(value); break;
+            case 'ParentCardId': setParentCardId(value); break;
             default: break;
         }
     };
@@ -109,9 +158,9 @@ const ModalcreditCard: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, 
             <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
             
             {/* Modal */}
-            <div className="relative w-full max-w-md bg-card rounded-2xl border border-border shadow-lg overflow-hidden animate-in fade-in zoom-in">
+            <div className="relative w-full max-w-md bg-card rounded-2xl border border-border shadow-lg overflow-hidden animate-in fade-in zoom-in max-h-[90vh] overflow-y-auto">
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-border">
+                <div className="flex items-center justify-between p-6 border-b border-border sticky top-0 bg-card z-10">
                     <h3 className="text-lg font-semibold text-foreground">{title}</h3>
                     <button type="button" onClick={onClose} className="p-2 rounded-lg text-muted hover:text-foreground hover:bg-secondary transition-colors">
                         <X className="w-5 h-5" />
@@ -148,13 +197,36 @@ const ModalcreditCard: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, 
                         </div>
                         <div>
                             <label htmlFor="Type" className="block text-sm font-medium text-foreground mb-2">Tipo do Cartão</label>
-                            <select value={type} onChange={(e) => setType(e.target.value)} name="Type" id="Type" className="w-full px-4 py-3 rounded-xl border border-border bg-card text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
+                            <select value={type} onChange={(e) => setType(e.target.value)} name="Type" id="Type" className="w-full px-4 py-3 rounded-xl border border-border bg-card text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" required>
                                 <option value="">Escolha o tipo do cartão</option>
                                 <option value="F">Físico</option>
                                 <option value="V">Virtual</option>
                                 <option value="VT">Virtual Temporário</option>
                             </select>
                         </div>
+
+                        {/* Campos condicionais - Nome do cartão só para Virtual, Cartão físico para Virtual e VT */}
+                        {showCardName && (
+                            <div>
+                                <label htmlFor="CardName" className="block text-sm font-medium text-foreground mb-2">Nome do Cartão</label>
+                                <input type="text" name="CardName" id="CardName" value={cardName} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border border-border bg-card text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" placeholder="Ex: Cartão compras online" />
+                            </div>
+                        )}
+                        {showParentCard && (
+                            <div>
+                                <label htmlFor="ParentCardId" className="block text-sm font-medium text-foreground mb-2">Cartão Físico (pai)</label>
+                                <select name="ParentCardId" id="ParentCardId" value={parentCardId} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border border-border bg-card text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" required>
+                                    <option value="">Selecione o cartão físico vinculado</option>
+                                    {physicalCards.map((card) => (
+                                        <option key={card.id} value={card.id}>
+                                            {card.owner} - •••• {card.final_card_num}
+                                        </option>
+                                    ))}
+                                </select>
+                                <p className="mt-1.5 text-xs text-muted">Vincule este cartão ao cartão físico correspondente para agrupamento de fatura.</p>
+                            </div>
+                        )}
+
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label htmlFor="InvoiceClosingDay" className="block text-sm font-medium text-foreground mb-2">Dia Fechamento</label>
