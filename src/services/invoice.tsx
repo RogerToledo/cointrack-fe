@@ -15,6 +15,7 @@ export interface InvoicePurchase {
     person_id: string;
     payment_type: string;
     credit_card: string;
+    card_name?: string;
     purchase_type: string;
     person: string;
 }
