@@ -1,0 +1,254 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Create `src/utils/currency.ts` with the `formatBRL` function": [
+      {
+        "executionId": "23970c7d-b7d8-47a1-a0fd-c5cfbe305dfc",
+        "chatSessionId": "sess_abc69ce6-50ba-4ae9-80ea-020fa8e59b56",
+        "timestamp": 1787355608847
+      },
+      {
+        "executionId": "23970c7d-b7d8-47a1-a0fd-c5cfbe305dfc",
+        "chatSessionId": "sess_abc69ce6-50ba-4ae9-80ea-020fa8e59b56",
+        "timestamp": 1787355622189
+      },
+      {
+        "executionId": "23970c7d-b7d8-47a1-a0fd-c5cfbe305dfc",
+        "chatSessionId": "sess_abc69ce6-50ba-4ae9-80ea-020fa8e59b56",
+        "timestamp": 1787355791578
+      }
+    ],
+    "2.1 Create `src/services/dashboard.tsx` with interfaces and `getDashboard` function": [
+      {
+        "executionId": "23970c7d-b7d8-47a1-a0fd-c5cfbe305dfc",
+        "chatSessionId": "sess_abc69ce6-50ba-4ae9-80ea-020fa8e59b56",
+        "timestamp": 1787355608876
+      },
+      {
+        "executionId": "23970c7d-b7d8-47a1-a0fd-c5cfbe305dfc",
+        "chatSessionId": "sess_abc69ce6-50ba-4ae9-80ea-020fa8e59b56",
+        "timestamp": 1787355622207
+      },
+      {
+        "executionId": "23970c7d-b7d8-47a1-a0fd-c5cfbe305dfc",
+        "chatSessionId": "sess_abc69ce6-50ba-4ae9-80ea-020fa8e59b56",
+        "timestamp": 1787355791593
+      }
+    ],
+    "3. Checkpoint - Verify service and utility modules": [
+      {
+        "executionId": "23970c7d-b7d8-47a1-a0fd-c5cfbe305dfc",
+        "chatSessionId": "sess_abc69ce6-50ba-4ae9-80ea-020fa8e59b56",
+        "timestamp": 1787355608900
+      },
+      {
+        "executionId": "23970c7d-b7d8-47a1-a0fd-c5cfbe305dfc",
+        "chatSessionId": "sess_abc69ce6-50ba-4ae9-80ea-020fa8e59b56",
+        "timestamp": 1787355977044
+      },
+      {
+        "executionId": "23970c7d-b7d8-47a1-a0fd-c5cfbe305dfc",
+        "chatSessionId": "sess_abc69ce6-50ba-4ae9-80ea-020fa8e59b56",
+        "timestamp": 1787355981920
+      }
+    ],
+    "4.1 Add state management and data fetching to `src/components/Dashboard.tsx`": [
+      {
+        "executionId": "23970c7d-b7d8-47a1-a0fd-c5cfbe305dfc",
+        "chatSessionId": "sess_abc69ce6-50ba-4ae9-80ea-020fa8e59b56",
+        "timestamp": 1787355608917
+      },
+      {
+        "executionId": "23970c7d-b7d8-47a1-a0fd-c5cfbe305dfc",
+        "chatSessionId": "sess_abc69ce6-50ba-4ae9-80ea-020fa8e59b56",
+        "timestamp": 1787355799782
+      },
+      {
+        "executionId": "23970c7d-b7d8-47a1-a0fd-c5cfbe305dfc",
+        "chatSessionId": "sess_abc69ce6-50ba-4ae9-80ea-020fa8e59b56",
+        "timestamp": 1787355945546
+      }
+    ],
+    "4.2 Implement loading and error states in Dashboard component": [
+      {
+        "executionId": "23970c7d-b7d8-47a1-a0fd-c5cfbe305dfc",
+        "chatSessionId": "sess_abc69ce6-50ba-4ae9-80ea-020fa8e59b56",
+        "timestamp": 1787355608950
+      },
+      {
+        "executionId": "23970c7d-b7d8-47a1-a0fd-c5cfbe305dfc",
+        "chatSessionId": "sess_abc69ce6-50ba-4ae9-80ea-020fa8e59b56",
+        "timestamp": 1787355994531
+      },
+      {
+        "executionId": "23970c7d-b7d8-47a1-a0fd-c5cfbe305dfc",
+        "chatSessionId": "sess_abc69ce6-50ba-4ae9-80ea-020fa8e59b56",
+        "timestamp": 1787356099368
+      }
+    ],
+    "4.3 Update StatCard \"Disponível\" section with dynamic data": [
+      {
+        "executionId": "23970c7d-b7d8-47a1-a0fd-c5cfbe305dfc",
+        "chatSessionId": "sess_abc69ce6-50ba-4ae9-80ea-020fa8e59b56",
+        "timestamp": 1787355608966
+      },
+      {
+        "executionId": "23970c7d-b7d8-47a1-a0fd-c5cfbe305dfc",
+        "chatSessionId": "sess_abc69ce6-50ba-4ae9-80ea-020fa8e59b56",
+        "timestamp": 1787355994550
+      },
+      {
+        "executionId": "23970c7d-b7d8-47a1-a0fd-c5cfbe305dfc",
+        "chatSessionId": "sess_abc69ce6-50ba-4ae9-80ea-020fa8e59b56",
+        "timestamp": 1787356163969
+      }
+    ],
+    "4.4 Update Installments section (\"Parcelamentos\") with dynamic data": [
+      {
+        "executionId": "23970c7d-b7d8-47a1-a0fd-c5cfbe305dfc",
+        "chatSessionId": "sess_abc69ce6-50ba-4ae9-80ea-020fa8e59b56",
+        "timestamp": 1787355608983
+      },
+      {
+        "executionId": "23970c7d-b7d8-47a1-a0fd-c5cfbe305dfc",
+        "chatSessionId": "sess_abc69ce6-50ba-4ae9-80ea-020fa8e59b56",
+        "timestamp": 1787355994565
+      },
+      {
+        "executionId": "23970c7d-b7d8-47a1-a0fd-c5cfbe305dfc",
+        "chatSessionId": "sess_abc69ce6-50ba-4ae9-80ea-020fa8e59b56",
+        "timestamp": 1787356258745
+      }
+    ],
+    "4.5 Update Summary section (\"Resumo\") with dynamic data": [
+      {
+        "executionId": "23970c7d-b7d8-47a1-a0fd-c5cfbe305dfc",
+        "chatSessionId": "sess_abc69ce6-50ba-4ae9-80ea-020fa8e59b56",
+        "timestamp": 1787355609002
+      },
+      {
+        "executionId": "23970c7d-b7d8-47a1-a0fd-c5cfbe305dfc",
+        "chatSessionId": "sess_abc69ce6-50ba-4ae9-80ea-020fa8e59b56",
+        "timestamp": 1787355994589
+      },
+      {
+        "executionId": "23970c7d-b7d8-47a1-a0fd-c5cfbe305dfc",
+        "chatSessionId": "sess_abc69ce6-50ba-4ae9-80ea-020fa8e59b56",
+        "timestamp": 1787356322525
+      }
+    ],
+    "4.6 Update Doughnut chart with dynamic percentage data": [
+      {
+        "executionId": "23970c7d-b7d8-47a1-a0fd-c5cfbe305dfc",
+        "chatSessionId": "sess_abc69ce6-50ba-4ae9-80ea-020fa8e59b56",
+        "timestamp": 1787355609021
+      },
+      {
+        "executionId": "23970c7d-b7d8-47a1-a0fd-c5cfbe305dfc",
+        "chatSessionId": "sess_abc69ce6-50ba-4ae9-80ea-020fa8e59b56",
+        "timestamp": 1787355994609
+      },
+      {
+        "executionId": "23970c7d-b7d8-47a1-a0fd-c5cfbe305dfc",
+        "chatSessionId": "sess_abc69ce6-50ba-4ae9-80ea-020fa8e59b56",
+        "timestamp": 1787356476686
+      }
+    ],
+    "5. Checkpoint - Verify Dashboard component renders with mock data": [
+      {
+        "executionId": "23970c7d-b7d8-47a1-a0fd-c5cfbe305dfc",
+        "chatSessionId": "sess_abc69ce6-50ba-4ae9-80ea-020fa8e59b56",
+        "timestamp": 1787355609037
+      },
+      {
+        "executionId": "23970c7d-b7d8-47a1-a0fd-c5cfbe305dfc",
+        "chatSessionId": "sess_abc69ce6-50ba-4ae9-80ea-020fa8e59b56",
+        "timestamp": 1787356482427
+      },
+      {
+        "executionId": "23970c7d-b7d8-47a1-a0fd-c5cfbe305dfc",
+        "chatSessionId": "sess_abc69ce6-50ba-4ae9-80ea-020fa8e59b56",
+        "timestamp": 1787356494187
+      }
+    ],
+    "6.1 Add \"Tipo de compra\" section to Dashboard component": [
+      {
+        "executionId": "23970c7d-b7d8-47a1-a0fd-c5cfbe305dfc",
+        "chatSessionId": "sess_abc69ce6-50ba-4ae9-80ea-020fa8e59b56",
+        "timestamp": 1787355609054
+      },
+      {
+        "executionId": "23970c7d-b7d8-47a1-a0fd-c5cfbe305dfc",
+        "chatSessionId": "sess_abc69ce6-50ba-4ae9-80ea-020fa8e59b56",
+        "timestamp": 1787356498782
+      },
+      {
+        "executionId": "23970c7d-b7d8-47a1-a0fd-c5cfbe305dfc",
+        "chatSessionId": "sess_abc69ce6-50ba-4ae9-80ea-020fa8e59b56",
+        "timestamp": 1787356619557
+      }
+    ],
+    "7. Checkpoint - Verify doughnut chart and categories section": [
+      {
+        "executionId": "23970c7d-b7d8-47a1-a0fd-c5cfbe305dfc",
+        "chatSessionId": "sess_abc69ce6-50ba-4ae9-80ea-020fa8e59b56",
+        "timestamp": 1787355609073
+      },
+      {
+        "executionId": "23970c7d-b7d8-47a1-a0fd-c5cfbe305dfc",
+        "chatSessionId": "sess_abc69ce6-50ba-4ae9-80ea-020fa8e59b56",
+        "timestamp": 1787356624205
+      },
+      {
+        "executionId": "23970c7d-b7d8-47a1-a0fd-c5cfbe305dfc",
+        "chatSessionId": "sess_abc69ce6-50ba-4ae9-80ea-020fa8e59b56",
+        "timestamp": 1787356648895
+      }
+    ],
+    "9. Final checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "23970c7d-b7d8-47a1-a0fd-c5cfbe305dfc",
+        "chatSessionId": "sess_abc69ce6-50ba-4ae9-80ea-020fa8e59b56",
+        "timestamp": 1787355609092
+      },
+      {
+        "executionId": "23970c7d-b7d8-47a1-a0fd-c5cfbe305dfc",
+        "chatSessionId": "sess_abc69ce6-50ba-4ae9-80ea-020fa8e59b56",
+        "timestamp": 1787356652891
+      },
+      {
+        "executionId": "23970c7d-b7d8-47a1-a0fd-c5cfbe305dfc",
+        "chatSessionId": "sess_abc69ce6-50ba-4ae9-80ea-020fa8e59b56",
+        "timestamp": 1787356664581
+      }
+    ],
+    "1. Create currency formatter utility": [
+      {
+        "executionId": "23970c7d-b7d8-47a1-a0fd-c5cfbe305dfc",
+        "chatSessionId": "sess_abc69ce6-50ba-4ae9-80ea-020fa8e59b56",
+        "timestamp": 1787355791607
+      }
+    ],
+    "2. Create dashboard API service": [
+      {
+        "executionId": "23970c7d-b7d8-47a1-a0fd-c5cfbe305dfc",
+        "chatSessionId": "sess_abc69ce6-50ba-4ae9-80ea-020fa8e59b56",
+        "timestamp": 1787355791628
+      }
+    ],
+    "4. Refactor Dashboard component with data fetching and state management": [
+      {
+        "executionId": "23970c7d-b7d8-47a1-a0fd-c5cfbe305dfc",
+        "chatSessionId": "sess_abc69ce6-50ba-4ae9-80ea-020fa8e59b56",
+        "timestamp": 1787356476711
+      }
+    ],
+    "6. Implement Categories Breakdown section": [
+      {
+        "executionId": "23970c7d-b7d8-47a1-a0fd-c5cfbe305dfc",
+        "chatSessionId": "sess_abc69ce6-50ba-4ae9-80ea-020fa8e59b56",
+        "timestamp": 1787356619576
+      }
+    ]
+  }
+}
