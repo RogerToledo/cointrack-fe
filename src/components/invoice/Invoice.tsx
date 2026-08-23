@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { getInvoice, payInvoice, InvoicePurchase } from "@/services/invoice";
-import { getCreditCards, CreditCard } from "@/services/creditCard";
+import { getPhysicalCreditCards, CreditCard } from "@/services/creditCard";
 import { FileText, ChevronLeft, ChevronRight, AlertCircle, CheckCircle, X, Lock } from "lucide-react";
 
 function Invoice() {
@@ -19,10 +19,9 @@ function Invoice() {
 
     const fetchCreditCards = useCallback(async () => {
         try {
-            const data = await getCreditCards();
+            const data = await getPhysicalCreditCards();
             if (data?.message && Array.isArray(data.message)) {
                 setCreditCards(data.message);
-                // Selecionar o primeiro cartão se nenhum estiver selecionado
                 if (!selectedCardId && data.message.length > 0) {
                     setSelectedCardId(data.message[0].id);
                 }
@@ -183,7 +182,6 @@ function Invoice() {
                             onChange={(e) => setSelectedCardId(e.target.value)}
                             className="w-full px-4 py-2.5 rounded-xl border border-border bg-card text-foreground text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                         >
-                            <option value="">Todos os cartões</option>
                             {creditCards.map((card) => (
                                 <option key={card.id} value={card.id}>
                                     {card.owner} - •••• {card.final_card_num}
@@ -257,7 +255,6 @@ function Invoice() {
                                     <th className="text-left px-6 py-4 font-semibold text-foreground">Parcelas</th>
                                     <th className="text-left px-6 py-4 font-semibold text-foreground">Data</th>
                                     <th className="text-left px-6 py-4 font-semibold text-foreground">Cartão</th>
-                                    <th className="text-left px-6 py-4 font-semibold text-foreground">Status</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border">
@@ -282,18 +279,7 @@ function Invoice() {
                                         <td className="px-6 py-4 text-muted">
                                             {purchase.date ? new Date(purchase.date).toLocaleDateString("pt-BR", { timeZone: "UTC" }) : "-"}
                                         </td>
-                                        <td className="px-6 py-4 text-muted">{purchase.credit_card}</td>
-                                        <td className="px-6 py-4">
-                                            {purchase.paid ? (
-                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success-light text-success">
-                                                    Pago
-                                                </span>
-                                            ) : (
-                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-warning-light text-warning">
-                                                    Pendente
-                                                </span>
-                                            )}
-                                        </td>
+                                        <td className="px-6 py-4 text-muted">{purchase.card_name || purchase.credit_card}</td>
                                     </tr>
                                 ))}
                             </tbody>
