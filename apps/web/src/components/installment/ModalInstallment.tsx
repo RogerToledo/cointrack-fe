@@ -7,9 +7,10 @@ interface ModalInstallmentsProps {
     onClose: () => void;
     installments: Installment[];
     onPay: (installmentId: string) => Promise<void>;
+    isCreditCardPurchase?: boolean;
 }
 
-const ModalInstallments: React.FC<ModalInstallmentsProps> = ({ isOpen, onClose, installments, onPay }) => {
+const ModalInstallments: React.FC<ModalInstallmentsProps> = ({ isOpen, onClose, installments, onPay, isCreditCardPurchase = false }) => {
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
 
@@ -105,13 +106,19 @@ const ModalInstallments: React.FC<ModalInstallmentsProps> = ({ isOpen, onClose, 
                                         </td>
                                         <td className="px-4 py-3 text-center">
                                             {!inst.paid && (
-                                                <button
-                                                    onClick={() => handlePay(inst.id)}
-                                                    className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 transition-transform hover:scale-110"
-                                                    title="Marcar como pago"
-                                                >
-                                                    <CheckCircle size={18} />
-                                                </button>
+                                                isCreditCardPurchase ? (
+                                                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                                                        Pagar via fatura
+                                                    </span>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => handlePay(inst.id)}
+                                                        className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 transition-transform hover:scale-110"
+                                                        title="Marcar como pago"
+                                                    >
+                                                        <CheckCircle size={18} />
+                                                    </button>
+                                                )
                                             )}
                                         </td>
                                     </tr>

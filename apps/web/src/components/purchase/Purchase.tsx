@@ -1,16 +1,29 @@
-import { useEffect, useState } from "react";
-import { getPurchases, deletePurchase, type PurchasesResponse } from "@/services/purchase";
+import { useEffect, useState, useCallback } from "react";
+import { getPurchases, deletePurchase, type Purchase } from "@/services/purchase";
 import { getPurchasesInstallments, payInstallment, type Installment } from "@/services/installment";
-import { Eye, Layers, Pencil, Trash2, X, Plus, ShoppingCart, AlertCircle, CheckCircle } from 'lucide-react';
+import { Eye, Layers, Pencil, Trash2, X, Plus, ShoppingCart, AlertCircle, CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import ModalPurchase from "./ModalPurchase";
 import ModalInstallments from "../installment/ModalInstallment";
 
+const MONTH_NAMES_PT = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+];
+
+function getCurrentMonth(): string {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function formatMonthLabel(yearMonth: string) {
+    const [year, month] = yearMonth.split('-').map(Number);
+    const date = new Date(year, month - 1);
+    return date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+}
+
 function Purchase() {
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [purchases, setPurchases] = useState<PurchasesResponse>({
-        message: [],
-        statusCode: 0,
-    });
+    const [purchases, setPurchases] = useState<Purchase[]>([]);
     const [loading, setLoading] = useState(true);
     const [success, setSuccess] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -18,6 +31,10 @@ function Purchase() {
     const [purchaseId, setPurchaseId] = useState<string | null>(null);
     const [isInstallmentModalOpen, setIsInstallmentModalOpen] = useState(false);
     const [selectedPurchaseInstallments, setSelectedPurchaseInstallments] = useState<Installment[]>([]);
+    const [selectedPurchaseIsCreditCard, setSelectedPurchaseIsCreditCard] = useState(false);
+    const [currentMonth, setCurrentMonth] = useState(getCurrentMonth);
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
 
     const openModal = () => setIsModalOpen(true);
     const closeModal = () => {
@@ -25,17 +42,23 @@ function Purchase() {
         setPurchaseId(null);
     }    
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async (targetPage: number = 1) => {
         setLoading(true);
         setError(null);
 
         try {
-            const data = await getPurchases();
-            console.log("Fetched purchases:", data);
-            if (data && Array.isArray(data.message)) {
-                setPurchases(data);
+            const data = await getPurchases(currentMonth, targetPage, 20);
+            const msg = data?.message;
+            if (msg && typeof msg === 'object' && !Array.isArray(msg) && 'responses' in msg) {
+                setPurchases(msg.responses);
+                setPage(msg.page);
+                setTotalPages(msg.total_pages);
+            } else if (msg && Array.isArray(msg)) {
+                setPurchases(msg);
+                setPage(1);
+                setTotalPages(1);
             } else {
-                setPurchases({ message: [], statusCode: 200 });
+                setPurchases([]);
             }
         } catch (err) {
             if (err instanceof Error) {
@@ -43,23 +66,26 @@ function Purchase() {
             } else {
                 setError("Erro desconhecido ao carregar compras");
             }
-            setPurchases({ message: [], statusCode: 500 });
+            setPurchases([]);
         } finally {
             setLoading(false);
         }
-    };
+    }, [currentMonth]);
 
     useEffect(() => {
-        fetchData();
-    }, []);
+        setPage(1);
+        fetchData(1);
+    }, [fetchData]);
 
     const handlePurchase = () => {
-        fetchData();
+        fetchData(page);
     }
 
     const handleInstallments = async (purchaseId: string) => {
         try {
             setPurchaseId(purchaseId);
+            const purchase = purchases.find(p => p.id === purchaseId);
+            setSelectedPurchaseIsCreditCard(!!purchase?.credit_card_id);
             const response = await getPurchasesInstallments(purchaseId);
             setSelectedPurchaseInstallments(Array.isArray(response.message) ? response.message : [response.message]);
             setIsInstallmentModalOpen(true);
@@ -80,7 +106,7 @@ function Purchase() {
             setSelectedPurchaseInstallments([]);
             setSuccess("Parcela paga com sucesso!");
             setTimeout(() => setSuccess(null), 3000);
-            await fetchData(); 
+            await fetchData(page); 
         } catch (err) {
             alert(`Erro ao processar pagamento: ${err instanceof Error ? err.message : "Erro desconhecido"}`);
             throw err;
@@ -97,9 +123,8 @@ function Purchase() {
         if (!window.confirm("Tem certeza que deseja deletar esta compra?")) return;
 
         try {
-            console.log("Deleting purchase", id);
             await deletePurchase(id)
-            await fetchData();
+            await fetchData(page);
         } catch (err) {
             console.error(err);
             alert("Erro ao deletar a compra.");
@@ -112,7 +137,13 @@ function Purchase() {
         openModal();
     }
 
-    const isEmpty = !loading && !error && (!purchases?.message || purchases.message.length === 0);
+    const navigateMonth = (direction: number) => {
+        const [year, month] = currentMonth.split('-').map(Number);
+        const date = new Date(year, month - 1 + direction);
+        setCurrentMonth(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
+    };
+
+    const isEmpty = !loading && !error && purchases.length === 0;
 
     return (
         <div className="space-y-6">
@@ -129,6 +160,31 @@ function Purchase() {
                 >
                     <Plus className="w-4 h-4" />
                     Nova Compra
+                </button>
+            </div>
+
+            {/* Month Navigator */}
+            <div className="flex items-center justify-end gap-2">
+                <button
+                    onClick={() => navigateMonth(-1)}
+                    className="p-2 rounded-lg hover:bg-muted/20 transition-colors"
+                    aria-label="Mês anterior"
+                >
+                    <ChevronLeft className="w-4 h-4 text-muted" />
+                </button>
+                <input
+                    type="month"
+                    value={currentMonth}
+                    onChange={(e) => setCurrentMonth(e.target.value)}
+                    className="bg-card border border-border rounded-xl px-4 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                />
+                <button
+                    onClick={() => navigateMonth(1)}
+                    disabled={currentMonth === getCurrentMonth()}
+                    className="p-2 rounded-lg hover:bg-muted/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    aria-label="Próximo mês"
+                >
+                    <ChevronRight className="w-4 h-4 text-muted" />
                 </button>
             </div>
 
@@ -187,7 +243,7 @@ function Purchase() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border">
-                                {purchases?.message.map((message) => (
+                                {purchases.map((message) => (
                                     <tr key={message.id} className="hover:bg-secondary/30 transition-colors">
                                         <td className="px-6 py-4 font-medium text-foreground">{message.person}</td>
                                         <td className="px-6 py-4 text-muted">{message.description}</td>
@@ -247,6 +303,29 @@ function Purchase() {
                             </tbody>
                         </table>
                     </div>
+
+                    {/* Pagination */}
+                    {totalPages > 1 && (
+                        <div className="flex items-center justify-center gap-4 py-4 border-t border-border">
+                            <button
+                                onClick={() => fetchData(page - 1)}
+                                disabled={page <= 1}
+                                className="px-3 py-1.5 rounded-lg text-sm font-medium text-muted hover:text-foreground hover:bg-secondary transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                                Anterior
+                            </button>
+                            <span className="text-sm text-muted">
+                                Página {page} de {totalPages}
+                            </span>
+                            <button
+                                onClick={() => fetchData(page + 1)}
+                                disabled={page >= totalPages}
+                                className="px-3 py-1.5 rounded-lg text-sm font-medium text-muted hover:text-foreground hover:bg-secondary transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                                Próxima
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -262,6 +341,7 @@ function Purchase() {
                 onClose={() => setIsInstallmentModalOpen(false)}
                 installments={selectedPurchaseInstallments || []}
                 onPay={handlePayInstallment}
+                isCreditCardPurchase={selectedPurchaseIsCreditCard}
             />
         </div>
     )

@@ -28,6 +28,18 @@ export interface PurchasesResponse {
     statusCode: number;
 }
 
+export interface PurchasesPaginatedResponse {
+    message: {
+        responses: Purchase[];
+        quantity: number;
+        total: number;
+        page: number;
+        limit: number;
+        total_pages: number;
+    };
+    statusCode: number;
+}
+
 export const createPurchase = async (
     description: string,
     amount: number,
@@ -98,8 +110,12 @@ export const getPurchase = async (id: string) => {
     return response.data;
 }
 
-export const getPurchases = async () => {
-    const response = await instance.get<PurchasesResponse>('/v1/purchases')
+export const getPurchases = async (month?: string, page: number = 1, limit: number = 20) => {
+    const params = new URLSearchParams();
+    if (month) params.append('month', month);
+    params.append('page', String(page));
+    params.append('limit', String(limit));
+    const response = await instance.get<PurchasesPaginatedResponse>(`/v1/purchases?${params.toString()}`)
     
     return response.data;
 }

@@ -108,6 +108,11 @@ function NavBar({ sidebarOpen, setSidebarOpen }: NavBarProps) {
                         {sidebarOpen && <span>Ganhos</span>}
                     </Link>
 
+                    <Link href="/invoice" className={navLinkClasses('/invoice')}>
+                        <Receipt className="w-5 h-5 flex-shrink-0" />
+                        {sidebarOpen && <span>Fatura</span>}
+                    </Link>
+
                     {/* Cadastro Section */}
                     {sidebarOpen && (
                         <div className="pt-4">
