@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { formatBRL } from '@cointrack/utils';
 
-import { MonthNavigator } from '../../../components/MonthNavigator';
+import { MonthPicker } from '../../../components/MonthPicker';
 import { PullToRefreshList } from '../../../components/PullToRefreshList';
 import { SwipeableRow } from '../../../components/SwipeableRow';
 import { useMonthNavigation } from '../../../hooks/useMonthNavigation';
@@ -20,17 +20,15 @@ function formatDate(dateStr: string): string {
 }
 
 export default function PurchasesScreen() {
-    const { currentMonth, displayLabel, goToPrevious, goToNext, canGoNext } = useMonthNavigation();
-    const { data, loading, error, refreshing, refresh, remove } = usePurchases(currentMonth);
+    const { currentMonth, displayLabel, goToPrevious, goToNext, canGoNext, setCurrentMonth } = useMonthNavigation();
+    const { data, loading, error, refreshing, refresh, remove, page, totalPages, total, nextPage, prevPage } = usePurchases(currentMonth);
     const router = useRouter();
 
     return (
         <View style={styles.container}>
-            <MonthNavigator
-                label={displayLabel}
-                onPrevious={goToPrevious}
-                onNext={goToNext}
-                canGoNext={canGoNext}
+            <MonthPicker
+                currentMonth={currentMonth}
+                onSelect={setCurrentMonth}
             />
             <PullToRefreshList
                 data={data}

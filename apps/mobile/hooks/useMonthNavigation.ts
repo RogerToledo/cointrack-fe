@@ -21,6 +21,7 @@ interface MonthNavigationReturn {
   goToPrevious: () => void;
   goToNext: () => void;
   canGoNext: boolean;
+  setCurrentMonth: (month: string) => void;
 }
 
 function getCurrentMonth(): string {
@@ -75,11 +76,16 @@ export function useMonthNavigation(): MonthNavigationReturn {
     });
   }, []);
 
+  const setMonth = useCallback((month: string) => {
+    setCurrentMonth(month);
+  }, []);
+
   return {
     currentMonth,
     displayLabel,
     goToPrevious,
     goToNext,
     canGoNext,
+    setCurrentMonth: setMonth,
   };
 }
