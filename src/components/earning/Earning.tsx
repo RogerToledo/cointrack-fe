@@ -1,9 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { getEarnings, deleteEarning, EarningsResponse} from "@/services/earning";
 import ModalEarning from "./ModalEarning";
 import axios from "axios";
-import { Eye, Pencil, Trash2, Plus, DollarSign, AlertCircle, X } from 'lucide-react';
+import { Eye, Pencil, Trash2, Plus, DollarSign, AlertCircle, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
+
+function getCurrentMonth() {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
 
 function Earning() {
     const [earnings, setEarnings] = useState<EarningsResponse>({
@@ -14,16 +19,17 @@ function Earning() {
     const [error, setError] = useState<string | null>(null);
     const [isUpdate, setIsUpdate] = useState<boolean>(false);
     const [earningId, setEarningId] = useState<string>("");
+    const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonth);
 
     const openModal = () => setIsModalOpen(true);
     const closeModal = () => setIsModalOpen(false);
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         setError(null);
+        const [year, month] = selectedMonth.split('-').map(Number);
 
         try {
-            const data = await getEarnings();
-            console.log("Ganhos recebidos da API:", data);
+            const data = await getEarnings(year, month);
             if (data) {
                 setEarnings(data);
             }
@@ -34,11 +40,11 @@ function Earning() {
                 setError("An unknown error occurred");
             }
         }
-    };
+    }, [selectedMonth]);
 
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [fetchData]);
 
     const handleEarning = async() => {
         await fetchData();
@@ -104,6 +110,39 @@ function Earning() {
                         Novo Ganho
                     </button>
                 </div>
+            </div>
+
+            {/* Month Navigator */}
+            <div className="flex items-center justify-end gap-2">
+                <button
+                    onClick={() => {
+                        const [year, month] = selectedMonth.split('-').map(Number);
+                        const prev = new Date(year, month - 2, 1);
+                        setSelectedMonth(`${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`);
+                    }}
+                    className="p-2 rounded-lg hover:bg-muted/20 transition-colors"
+                    aria-label="Mês anterior"
+                >
+                    <ChevronLeft className="w-4 h-4 text-muted" />
+                </button>
+                <input
+                    type="month"
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(e.target.value)}
+                    className="bg-card border border-border rounded-xl px-4 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                />
+                <button
+                    onClick={() => {
+                        const [year, month] = selectedMonth.split('-').map(Number);
+                        const next = new Date(year, month, 1);
+                        setSelectedMonth(`${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`);
+                    }}
+                    disabled={selectedMonth === getCurrentMonth()}
+                    className="p-2 rounded-lg hover:bg-muted/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    aria-label="Próximo mês"
+                >
+                    <ChevronRight className="w-4 h-4 text-muted" />
+                </button>
             </div>
 
             {/* Error Alert */}

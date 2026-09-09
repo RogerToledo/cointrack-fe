@@ -74,7 +74,11 @@ export const getEarningBy = async (id: string) => {
     return response.data;
 };
 
-export const getEarnings = async () => {
-    const response = await instance.get<EarningsResponse>('/v1/earnings');
+export const getEarnings = async (year?: number, month?: number) => {
+    const params = new URLSearchParams();
+    if (year) params.append('year', String(year));
+    if (month) params.append('month', String(month));
+    const url = params.toString() ? `/v1/earnings?${params.toString()}` : '/v1/earnings';
+    const response = await instance.get<EarningsResponse>(url);
     return response.data;
 };
