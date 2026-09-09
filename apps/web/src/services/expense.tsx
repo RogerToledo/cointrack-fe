@@ -52,8 +52,8 @@ export const createExpense = async (
     return response.data;
 };
 
-export const reCreateExpense = async () => {
-    const response = await instance.post('/v1/expenses/recreate');
+export const reCreateExpense = async (expenseId?: string) => {
+    const response = await instance.post('/v1/expenses/recreate', expenseId ? { id: expenseId } : {});
     return response.data;
 }
 

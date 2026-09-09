@@ -3,7 +3,7 @@ import { getExpenses, deleteExpense, reCreateExpense, payExpense, ExpensesRespon
 import ModalExpense from "./ModalExpense";
 import ModalPayExpense from "./ModalPayExpense";
 import axios from "axios";
-import { Eye, Pencil, Trash2, Wallet, X, Plus, Receipt, AlertCircle, RefreshCw, CheckCircle } from 'lucide-react';
+import { Eye, Pencil, Trash2, Wallet, X, Plus, Receipt, AlertCircle, CheckCircle } from 'lucide-react';
 
 function Expense() {
     const [expenses, setExpenses] = useState<ExpensesResponse>({
@@ -16,6 +16,8 @@ function Expense() {
     const [success, setSuccess] = useState<string | null>(null);
     const [isUpdate, setIsUpdate] = useState<boolean>(false);
     const [expenseId, setExpenseId] = useState<string>("");
+    const [showRecreateModal, setShowRecreateModal] = useState<boolean>(false);
+    const [paidExpenseId, setPaidExpenseId] = useState<string>("");
 
     const openPayModal = (id: string) => {
         setExpenseId(id);
@@ -59,13 +61,39 @@ function Expense() {
     const handlePay = async (id: string, amount: number, date: string) => {
         try {
             await payExpense(id, amount, date);
-            setSuccess("Pagamento registrado!");
             setIsPayModalOpen(false);
             fetchData();
-            setTimeout(() => setSuccess(null), 3000);
+            setPaidExpenseId(id);
+            setShowRecreateModal(true);
         } catch (err) {
             throw err;
         }
+    };
+
+    const handleRecreateConfirm = async () => {
+        try {
+            await reCreateExpense(paidExpenseId);
+            await fetchData();
+            setSuccess("Despesa paga e recorrente recriada com sucesso!");
+            setTimeout(() => setSuccess(null), 3000);
+        } catch (err) {
+            if (axios.isAxiosError(err)) {
+                const apiMessage = err.response?.data?.message;
+                setError(apiMessage || "Despesa paga, mas erro ao recriar recorrência.");
+            } else {
+                setError("Despesa paga, mas erro ao recriar recorrência.");
+            }
+        } finally {
+            setShowRecreateModal(false);
+            setPaidExpenseId("");
+        }
+    };
+
+    const handleRecreateDecline = () => {
+        setShowRecreateModal(false);
+        setPaidExpenseId("");
+        setSuccess("Pagamento registrado com sucesso!");
+        setTimeout(() => setSuccess(null), 3000);
     };
 
     const handleDelete = async (id: string) => {
@@ -93,22 +121,6 @@ function Expense() {
         openModal();
     }
 
-    const handleRecreateRecurring = async () => {
-        try {
-            await reCreateExpense();
-            await fetchData();
-            setSuccess("Despesas recorrentes recriadas!");
-            setTimeout(() => setSuccess(null), 3000);
-        } catch (err) {
-            if (axios.isAxiosError(err)) {
-                const apiMessage = err.response?.data?.message;
-                setError(apiMessage || "Ocorreu um erro inesperado.");
-            } else {
-                setError("Ocorreu um erro inesperado.");
-            }
-        }
-    }
-
     const handleOpenNew = () => {
         setExpenseId("");
         setIsUpdate(false);
@@ -125,24 +137,14 @@ function Expense() {
                     <h1 className="text-2xl font-bold text-foreground">Despesas</h1>
                     <p className="text-muted mt-1">Gerencie suas despesas fixas e variáveis</p>
                 </div>
-                <div className="flex items-center gap-3">
-                    <button 
-                        type="button" 
-                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-card text-sm font-medium text-foreground hover:bg-secondary transition-all"
-                        onClick={handleRecreateRecurring}
-                    >
-                        <RefreshCw className="w-4 h-4" />
-                        Recriar Recorrente
-                    </button>
-                    <button 
-                        type="button" 
-                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary-hover focus:ring-4 focus:ring-primary/20 transition-all"
-                        onClick={handleOpenNew}
-                    >
-                        <Plus className="w-4 h-4" />
-                        Nova Despesa
-                    </button>
-                </div>
+                <button 
+                    type="button" 
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary-hover focus:ring-4 focus:ring-primary/20 transition-all"
+                    onClick={handleOpenNew}
+                >
+                    <Plus className="w-4 h-4" />
+                    Nova Despesa
+                </button>
             </div>
 
             {/* Success Alert */}
@@ -271,6 +273,36 @@ function Expense() {
                 onConfirm={handlePay}
                 expenseId={expenseId}
             />
+
+            {/* Modal Recriar Recorrente */}
+            {showRecreateModal && (
+                <div className="fixed inset-0 flex items-center justify-center z-50">
+                    <div className="fixed inset-0 bg-black opacity-50" onClick={handleRecreateDecline}></div>
+                    <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md mx-4 overflow-hidden">
+                        <div className="p-6 text-center">
+                            <div className="w-12 h-12 rounded-full bg-primary-light flex items-center justify-center mx-auto mb-4">
+                                <CheckCircle className="w-6 h-6 text-primary" />
+                            </div>
+                            <h3 className="text-lg font-semibold text-foreground mb-2">Despesa paga com sucesso!</h3>
+                            <p className="text-sm text-muted mb-6">Deseja recriar esta despesa como recorrente para o próximo período?</p>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={handleRecreateDecline}
+                                    className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium text-foreground hover:bg-secondary transition-colors"
+                                >
+                                    Não, obrigado
+                                </button>
+                                <button
+                                    onClick={handleRecreateConfirm}
+                                    className="flex-1 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary-hover transition-colors"
+                                >
+                                    Sim, recriar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
