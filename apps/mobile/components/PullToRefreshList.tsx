@@ -14,6 +14,7 @@ interface PullToRefreshListProps<T> {
     emptyMessage?: string;
     onRetry?: () => void;
     keyExtractor: (item: T) => string;
+    ListFooterComponent?: React.ReactElement | null;
 }
 
 export function PullToRefreshList<T>({
@@ -26,6 +27,7 @@ export function PullToRefreshList<T>({
     emptyMessage = 'Nenhum item encontrado',
     onRetry,
     keyExtractor,
+    ListFooterComponent,
 }: PullToRefreshListProps<T>) {
     const handleRenderItem = useCallback(
         ({ item, index }: ListRenderItemInfo<T>) => renderItem(item, index),
@@ -53,6 +55,7 @@ export function PullToRefreshList<T>({
                 <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }
             contentContainerStyle={styles.listContent}
+            ListFooterComponent={ListFooterComponent}
         />
     );
 }

@@ -20,7 +20,11 @@ function formatDate(dateStr: string): string {
 }
 
 export default function PurchasesScreen() {
+<<<<<<< Updated upstream
     const { currentMonth, displayLabel, goToPrevious, goToNext, canGoNext, setCurrentMonth } = useMonthNavigation();
+=======
+    const { currentMonth, displayLabel, goToPrevious, goToNext, canGoNext } = useMonthNavigation();
+>>>>>>> Stashed changes
     const { data, loading, error, refreshing, refresh, remove, page, totalPages, total, nextPage, prevPage } = usePurchases(currentMonth);
     const router = useRouter();
 
@@ -65,6 +69,29 @@ export default function PurchasesScreen() {
                         </TouchableOpacity>
                     </SwipeableRow>
                 )}
+                ListFooterComponent={
+                    totalPages > 1 ? (
+                        <View style={styles.pagination}>
+                            <TouchableOpacity
+                                style={[styles.pageButton, page <= 1 && styles.pageButtonDisabled]}
+                                onPress={prevPage}
+                                disabled={page <= 1}
+                            >
+                                <Ionicons name="chevron-back" size={20} color={page <= 1 ? '#D1D5DB' : '#4F46E5'} />
+                            </TouchableOpacity>
+                            <Text style={styles.pageText}>
+                                {page} / {totalPages}
+                            </Text>
+                            <TouchableOpacity
+                                style={[styles.pageButton, page >= totalPages && styles.pageButtonDisabled]}
+                                onPress={nextPage}
+                                disabled={page >= totalPages}
+                            >
+                                <Ionicons name="chevron-forward" size={20} color={page >= totalPages ? '#D1D5DB' : '#4F46E5'} />
+                            </TouchableOpacity>
+                        </View>
+                    ) : null
+                }
             />
             <TouchableOpacity
                 style={styles.fab}
@@ -129,6 +156,29 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
         color: '#111827',
+    },
+    pagination: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: 16,
+        gap: 16,
+    },
+    pageButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#EEF2FF',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    pageButtonDisabled: {
+        backgroundColor: '#F3F4F6',
+    },
+    pageText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#374151',
     },
     fab: {
         position: 'absolute',
