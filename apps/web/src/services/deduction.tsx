@@ -72,7 +72,11 @@ export const getDeductionById = async (id: string) => {
     return response.data;
 };
 
-export const getDeductions = async () => {
-    const response = await instance.get<DeductionsResponse>('/v1/deductions');
+export const getDeductions = async (year?: number, month?: number) => {
+    const params = new URLSearchParams();
+    if (year) params.append('year', String(year));
+    if (month) params.append('month', String(month));
+    const url = params.toString() ? `/v1/deductions?${params.toString()}` : '/v1/deductions';
+    const response = await instance.get<DeductionsResponse>(url);
     return response.data;
 };

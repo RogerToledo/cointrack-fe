@@ -21,8 +21,12 @@ interface Purchase {
 
 export function usePurchases(month: string) {
   return useCRUD<Purchase>({
-    fetchFn: () => apiClient.get(`/v1/purchases?month=${month}`).then((r) => r.data),
+    fetchFn: (page, limit) =>
+      apiClient
+        .get(`/v1/purchases?month=${month}&page=${page}&limit=${limit}`)
+        .then((r) => r.data),
     deleteFn: (id) => apiClient.delete(`/v1/purchases/${id}`),
     deps: [month],
+    paginated: true,
   });
 }
