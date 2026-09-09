@@ -45,9 +45,7 @@ export default function LoginScreen() {
         setLoading(true);
 
         try {
-            console.log('[LOGIN] 1. Calling authService.login...');
             const response = await authService.login({ email: email.trim(), password });
-            console.log('[LOGIN] 2. Response received:', JSON.stringify(response).substring(0, 100));
 
             const token = response.message?.token;
             if (!token || typeof token !== 'string') {
@@ -72,10 +70,8 @@ export default function LoginScreen() {
             console.log('[LOGIN] 6. userData:', JSON.stringify(userData));
 
             await login(token, userData);
-            console.log('[LOGIN] 7. login() completed, should navigate now');
-            // Navigation happens automatically via auth guard in root layout
+            router.replace('/');
         } catch (err) {
-            console.log('[LOGIN] ERROR:', err);
             setApiError(
                 extractErrorMessage(err, 'Erro ao fazer login. Verifique suas credenciais.')
             );
