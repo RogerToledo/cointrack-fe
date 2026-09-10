@@ -20,11 +20,7 @@ function formatDate(dateStr: string): string {
 }
 
 export default function PurchasesScreen() {
-<<<<<<< Updated upstream
     const { currentMonth, displayLabel, goToPrevious, goToNext, canGoNext, setCurrentMonth } = useMonthNavigation();
-=======
-    const { currentMonth, displayLabel, goToPrevious, goToNext, canGoNext } = useMonthNavigation();
->>>>>>> Stashed changes
     const { data, loading, error, refreshing, refresh, remove, page, totalPages, total, nextPage, prevPage } = usePurchases(currentMonth);
     const router = useRouter();
 
