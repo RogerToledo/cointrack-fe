@@ -26,4 +26,4 @@ When writing, refactoring, or reviewing React code, you MUST adhere to modern fu
 ## Accessibility (a11y) & Testing
 - **Semantic HTML**: Use semantic tags (`<header>`, `<nav>`, `<main>`, `<button>`, `<article>`) instead of generic `<div>` wrappers.
 - **Accessible Elements**: Ensure interactive elements have accessible names via `aria-label` or visible text. Always use `<button>` for click actions, not `<div onClick={...}>`.
-- **Behavior-Driven Tests**: Write component tests (`*.test.tsx`) using React Testing Library, querying elements by accessible role (`getByRole`) or label (`getByLabelText`) rather than implementation details.
+- **Behavior-Driven Tests**: Write component tests (`*.test.tsx`) using React Testing Library, querying elements by accessible role (`getByRole`) or label (`getByLabelText`) rather than implementation details
