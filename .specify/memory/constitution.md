@@ -2,43 +2,66 @@
 
 ## Visão Geral
 
-CoinTrack é uma aplicação de controle financeiro pessoal e familiar. O frontend é construído com Next.js (Pages Router) e se comunica com uma API REST backend via Axios. Suporta autenticação JWT, múltiplas famílias, e gerenciamento de compras, despesas, ganhos, cartões de crédito e faturas.
+CoinTrack é uma aplicação de controle financeiro pessoal e familiar com duas interfaces (web e mobile) que consomem uma API REST compartilhada. O frontend web é Next.js (Pages Router), o mobile é Expo/React Native. Idioma: **PT-BR** em toda UI.
 
 ## Core Principles
 
 ### I. Preservar Contratos com o Backend
-Nunca alterar a camada de serviços (`src/services/`) sem confirmação explícita de que o backend mudou. As interfaces TypeScript nos services representam o contrato exato da API. O formato padrão de resposta é `{ statusCode: number, message: T }`.
+Nunca alterar a camada de serviços sem confirmação explícita de que o backend mudou. As interfaces TypeScript nos services representam o contrato exato da API. O formato padrão de resposta é `{ statusCode: number, message: T }`.
 
 ### II. Componentes Autocontidos
-Cada entidade (creditCard, purchase, earning, etc.) tem sua pasta em `src/components/` com o componente de listagem e o modal de CRUD. A lógica de estado e chamadas à API fica no próprio componente — não há gerenciamento de estado global além de Auth e Family.
+Cada entidade (creditCard, purchase, earning, etc.) tem sua pasta com o componente de listagem e o modal de CRUD. A lógica de estado e chamadas à API fica no próprio componente — não há gerenciamento de estado global além de Auth e Family.
 
 ### III. Design System Consistente
-O projeto usa Tailwind CSS v4 com variáveis CSS customizadas definidas em `src/styles/globals.css`. Todas as cores usam tokens semânticos: `primary`, `accent`, `success`, `danger`, `warning`, `muted`, `border`, `card`, `foreground`, `background`. Componentes usam `rounded-xl`/`rounded-2xl`, ícones do `lucide-react`, e transições suaves.
+**Web**: Tailwind CSS v4 com variáveis CSS customizadas em `globals.css`. Tokens semânticos: `primary`, `accent`, `success`, `danger`, `warning`, `muted`, `border`, `card`, `foreground`, `background`. Bordas `rounded-xl`, ícones `lucide-react`.
+**Mobile**: `StyleSheet.create()` com cores hardcoded. Expo `userInterfaceStyle: automatic` para light/dark.
 
-### IV. Navegação via Sidebar
-A estrutura de layout usa sidebar colapsável (`src/components/NavBar.tsx`) com `src/components/Layout.tsx` gerenciando o offset do conteúdo. Páginas públicas (login, register, forgot-password) não renderizam a sidebar.
+### IV. Navegação
+**Web**: Sidebar colapsável (`NavBar.tsx`) com `Layout.tsx` gerenciando offset. Páginas públicas não renderizam sidebar.
+**Mobile**: Tab navigator (Dashboard + Compras) via expo-router. Rotas file-based.
 
 ### V. Proteção de Rotas
-Páginas autenticadas usam o componente `ProtectedRoute` que redireciona para `/login` se não autenticado. O token JWT é armazenado em `localStorage` e adicionado via interceptor Axios.
+**Web**: Componente `ProtectedRoute` redireciona para `/login`. Token JWT em `localStorage`.
+**Mobile**: `AuthProvider` controla navegação via `Stack` condicional. Token em `expo-secure-store`.
+
+### VI. Dual Write (web/legado)
+Toda alteração em `apps/web/src/` **DEVE** ser copiada para `src/` na raiz. O Vercel builda a partir da raiz usando o `tsconfig.json` que mapeia `@/*` para `./src/*`.
 
 ## Stack Tecnológica
 
-| Camada | Tecnologia |
-|--------|-----------|
-| Framework | Next.js 16 (Pages Router, Turbopack) |
-| UI | React 19, Tailwind CSS v4 |
-| Ícones | lucide-react |
-| HTTP | Axios com interceptors (JWT + 401 redirect) |
-| Gráficos | Chart.js + react-chartjs-2 |
-| Linguagem | TypeScript 5 |
-| Linting | ESLint 9 + eslint-config-next |
-| Build | `npm run build` (next build) |
+| Camada | Web | Mobile |
+|--------|-----|--------|
+| Framework | Next.js 16 (Pages Router) | Expo SDK 57 |
+| React | 19 | 19.2 |
+| Linguagem | TypeScript 5 (strict) | TypeScript 6 (strict) |
+| Estilo | Tailwind 4 + CSS vars | StyleSheet.create() |
+| UI | Flowbite 3 + Lucide React | Componentes nativos |
+| HTTP | Axios | Axios |
+| Gráficos | Chart.js 4 + react-chartjs-2 | — |
+| State | React Context API | React Context API |
+| Segurança | localStorage (token) | expo-secure-store |
+| Bundler | Turbopack | Metro |
+
+## Monorepo
+
+```
+cointrack-fe/
+  apps/
+    web/        @cointrack/web
+    mobile/     @cointrack/mobile
+  packages/
+    services/   @cointrack/services  API client factory (plataforma-agnóstico)
+    types/      @cointrack/types     Interfaces compartilhadas
+    utils/      @cointrack/utils     Utilitários (formatBRL)
+  src/          ← LEGADO (espelho de apps/web/src/)
+```
 
 ## Estrutura do Projeto
 
+### Web (`apps/web/src/`)
 ```
 src/
-├── components/       # Componentes organizados por entidade
+├── components/       # Componentes por entidade
 │   ├── creditCard/   # CreditCard.tsx + ModalCreditCard.tsx
 │   ├── purchase/     # Purchase.tsx + ModalPurchase.tsx
 │   ├── invoice/      # Invoice.tsx
@@ -61,35 +84,56 @@ src/
 └── types/            # Tipos compartilhados (ApiError)
 ```
 
+### Mobile (`apps/mobile/`)
+```
+app/
+  _layout.tsx              Root: GestureHandler > SafeArea > Auth > Toast > Family
+  (auth)/                  login.tsx, register.tsx, forgot-password.tsx
+  (tabs)/
+    _layout.tsx            Tab navigator (Dashboard, Compras)
+    index.tsx              Dashboard
+    purchases/             index.tsx, form.tsx
+components/                ConfirmDialog, EmptyState, ErrorState, FamilySelector,
+                           FormInput, LoadingScreen, MonthNavigator, MonthPicker,
+                           PullToRefreshList, SwipeableRow, Toast
+contexts/                  AuthContext, FamilyContext, ToastContext
+hooks/                     useCRUD<T>, useDashboard, useMonthNavigation, usePurchases, etc.
+services/                  api.ts (usa @cointrack/services factory)
+```
+
 ## Padrões de Código
 
 ### Services
-- Um arquivo por entidade em `src/services/`
-- Exporta interfaces TypeScript representando request/response da API
-- Exporta funções async que retornam `response.data`
-- Usa instância Axios compartilhada de `./config`
-- API base URL via `NEXT_PUBLIC_API_URL` (default: `http://127.0.0.1:8180`)
+- **Legado (web)**: Um arquivo por entidade, funções standalone, instância Axios de `config.tsx`
+- **Novo (packages/services)**: Factory functions `createXService(client)` — plataforma-agnóstico
+- API base URL via env: web `NEXT_PUBLIC_API_URL`, mobile `EXPO_PUBLIC_API_URL` (default: `http://127.0.0.1:8180`)
 - Prefixo de rotas: `/v1/`
 
-### Componentes de Listagem
+### Componentes de Listagem (web)
 - Header com título, descrição e botão "Novo"
-- Alertas de erro/sucesso com ícones lucide
-- Empty state com ícone e mensagem
+- Seletor de mês com `<input type="month">` e setas (ChevronLeft/ChevronRight)
+- Paginação com `page`, `totalPages`, `total`
 - Tabela com `hover:bg-secondary/30`, `divide-y divide-border`
-- Ações em cada linha: Eye (ver), Pencil (editar), Trash2 (deletar)
+- Ações: Eye (ver), Pencil (editar), Trash2 (deletar)
 - Confirmação via `window.confirm()` antes de deletar
 
-### Modais
-- Overlay com `bg-black/50 backdrop-blur-sm`
-- Container com `rounded-2xl`, header com título + botão fechar (X)
-- Formulário com inputs `rounded-xl`, labels com `text-sm font-medium`
+### Modais (web)
+- Overlay: `bg-black/50 backdrop-blur-sm`
+- Container: `rounded-2xl`, header com título + botão fechar (X)
+- Inputs: `rounded-xl`, labels: `text-sm font-medium`
 - Alertas inline de sucesso/erro
-- Fecha automaticamente após ação bem-sucedida (setTimeout 2-3s)
+- Fecha automaticamente após sucesso (setTimeout 2-3s)
 
-### Páginas de Autenticação
-- Layout split-screen (branding à esquerda, form à direita)
-- Inputs com ícone à esquerda (`pl-11`)
-- Botão primário com spinner de loading
+### Hooks (mobile)
+- `useCRUD<T>` — hook genérico com paginação, refresh, delete
+- Cada entidade tem wrapper: `usePurchases`, `useEarnings`, etc.
+- `useMonthNavigation` — estado do seletor de mês (formato `YYYY-MM`)
+
+### Forms
+- Sem Formik ou React Hook Form
+- Estado manual com `useState` por campo
+- Validação via funções puras: `validateLoginForm()`, `validatePurchaseForm()`
+- Erros: `axios.isAxiosError()` + `err.response?.data?.message`
 
 ## API - Formato Padrão
 
@@ -104,29 +148,41 @@ src/
 { statusCode: number, message: string }
 ```
 
+### Params de módulo
+- **Earnings/Deductions**: `GET /v1/earnings?year=2026&month=9` (year e month separados)
+- **Purchases**: `GET /v1/purchases?month=2026-09` (month como YYYY-MM)
+- **Outros**: sem paginação/mês por enquanto
+
 ## Contextos
 
 ### AuthContext
 - `user`, `isAuthenticated`, `isLoading`, `login()`, `logout()`, `updateUser()`
-- Token em `localStorage('token')`, user em `localStorage('user')`
+- Web: `localStorage('token')` + `localStorage('user')`
+- Mobile: `expo-secure-store` via `secureStorageAdapter`
 - JWT decodificado no client para extrair dados do usuário
 
 ### FamilyContext
 - `families`, `selectedFamily`, `setSelectedFamily()`, `refreshFamilies()`
 - Família selecionada determina as pessoas disponíveis nos formulários
 
+### ToastContext (mobile)
+- `showToast(message, type)` — notificações inline
+
 ## Regras de Negócio no Frontend
 
 1. **Cartão de Crédito**: Tipo F (Físico) recebe `card_name = "Físico"` automaticamente. Tipo VT recebe `card_name = "Temporário"`. Tipo V permite nome livre. Tipos V e VT exigem `physical_card_id` (cartão pai).
 2. **Fatura**: Exibe compras por mês/cartão. Status: Aberta (mês atual/futuro), Fechada (mês passado, não paga), Paga (todas compras pagas).
-3. **Despesas**: Suportam recriação de recorrentes e pagamento individual.
-4. **Compras parceladas**: Parcelas são gerenciadas via modal separado com pagamento individual.
+3. **Despesas**: Suportam recriação de recorrentes (`POST /v1/expenses/recreate` com `{ id: expenseId }`) e pagamento individual.
+4. **Compras parceladas**: Parcelas gerenciadas via modal separado com pagamento individual.
+5. **Parcelamento pós-pagamento**: Após pagar uma compra parcelada, o sistema pergunta se deseja recriar a despesa recorrente.
 
 ## Governance
 
 - A constitution deve ser atualizada sempre que novas entidades, padrões ou regras de negócio forem adicionados
 - Alterações em services exigem confirmação do contrato backend
-- O build (`npm run build`) deve passar sem erros antes de qualquer merge
+- O build (`npm run build` na raiz) deve passar sem erros antes de qualquer merge
 - Não adicionar dependências sem justificativa clara
+- PT-BR em toda UI e commits
+- Branch naming: `feat/fn-{issue}-{description}`
 
-**Version**: 1.0.0 | **Ratified**: 2026-07-21 | **Last Amended**: 2026-07-21
+**Version**: 2.0.0 | **Ratified**: 2026-07-21 | **Last Amended**: 2026-09-09
