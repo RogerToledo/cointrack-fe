@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { getEarnings, deleteEarning, EarningsResponse} from "@/services/earning";
+import { useAuth } from "@/contexts/AuthContext";
 import ModalEarning from "./ModalEarning";
 import axios from "axios";
 import { Eye, Pencil, Trash2, Plus, DollarSign, AlertCircle, X, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -20,6 +21,7 @@ function Earning() {
     const [isUpdate, setIsUpdate] = useState<boolean>(false);
     const [earningId, setEarningId] = useState<string>("");
     const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonth);
+    const { user } = useAuth();
 
     const openModal = () => setIsModalOpen(true);
     const closeModal = () => setIsModalOpen(false);
@@ -29,7 +31,7 @@ function Earning() {
         const [year, month] = selectedMonth.split('-').map(Number);
 
         try {
-            const data = await getEarnings(year, month);
+            const data = await getEarnings(year, month, user?.id);
             if (data) {
                 setEarnings(data);
             }
@@ -40,7 +42,7 @@ function Earning() {
                 setError("An unknown error occurred");
             }
         }
-    }, [selectedMonth]);
+    }, [selectedMonth, user?.id]);
 
     useEffect(() => {
         fetchData();
@@ -174,25 +176,25 @@ function Earning() {
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="border-b border-border bg-secondary/50">
-                                    <th className="text-left px-6 py-4 font-semibold text-foreground">Pessoa</th>
+                                    <th className="text-left px-6 py-4 font-semibold text-foreground">Usuário</th>
                                     <th className="text-left px-6 py-4 font-semibold text-foreground">Descrição</th>
+                                    <th className="text-left px-6 py-4 font-semibold text-foreground">Periodicidade</th>
                                     <th className="text-left px-6 py-4 font-semibold text-foreground">Data</th>
-                                    <th className="text-left px-6 py-4 font-semibold text-foreground">Ganho Bruto</th>
-                                    <th className="text-left px-6 py-4 font-semibold text-foreground">Ganho Líquido</th>
+                                    <th className="text-left px-6 py-4 font-semibold text-foreground">Valor</th>
                                     <th className="text-right px-6 py-4 font-semibold text-foreground">Ações</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border">
                                 {earnings?.message.map((earning) => (
                                     <tr key={earning.id} className="hover:bg-secondary/30 transition-colors">
-                                        <td className="px-6 py-4 font-medium text-foreground">{earning.person_name || '-'}</td>
+                                        <td className="px-6 py-4 font-medium text-foreground">{user?.name || '-'}</td>
                                         <td className="px-6 py-4 text-muted">{earning.description}</td>
+                                        <td className="px-6 py-4 text-muted">{earning.periodicity}</td>
                                         <td className="px-6 py-4 text-muted">
-                                            {earning.date ? new Date(earning.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '-'}
+                                            {earning.record?.date ? new Date(earning.record.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '-'}
                                         </td>
-                                        <td className="px-6 py-4 font-medium text-foreground">R$ {earning.amount}</td>
-                                        <td className="px-6 py-4">
-                                            <span className="text-success font-medium">{earning.net_salary}</span>
+                                        <td className="px-6 py-4 font-medium text-foreground">
+                                            R$ {earning.record?.amount?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center justify-end gap-1">

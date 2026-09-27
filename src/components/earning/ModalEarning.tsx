@@ -20,8 +20,7 @@ const ModalEarning: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, isU
     const [description, setDescription] = useState('');
     const [amount, setAmount] = useState('');
     const [date, setDate] = useState('');
-    const [active, setActive] = useState(false);
-    const [isMonthly, setIsMonthly] = useState(false);
+    const [periodicity, setPeriodicity] = useState('MENSAL');
     const [ownerList, setOwnerList] = useState<Person[]>([]);
     const [success, setSuccess] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -59,23 +58,21 @@ const ModalEarning: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, isU
                         const earningResponse = await getEarningBy(earningId);
                         const earningData = earningResponse.message;
 
-                        const ownerId = earningData.person_id || "00000000-0000-0000-0000-000000000000";
-                        const dateFormatted = earningData.date ? earningData.date.split('T')[0] : '';
+                        const ownerId = earningData.idUser || "00000000-0000-0000-0000-000000000000";
+                        const dateFormatted = earningData.record?.date ? earningData.record.date.split('T')[0] : '';
 
                         setEarningOwner(ownerId);
                         setDescription(earningData.description);
-                        setAmount(earningData.amount?.toString() || '');
+                        setAmount(earningData.record?.amount?.toString() || '');
                         setDate(dateFormatted);
-                        setActive(earningData.active);
-                        setIsMonthly(earningData.is_monthly);
+                        setPeriodicity(earningData.periodicity || 'MENSAL');
                     } else {
                         setButtonText("Adicionar novo ganho");
                         setEarningOwner("");
                         setDescription("");
                         setAmount('');
                         setDate("");
-                        setActive(false);
-                        setIsMonthly(false);
+                        setPeriodicity('MENSAL');
                     }
                 } catch (error) {
                     if (axios.isAxiosError(error)) {
@@ -97,19 +94,20 @@ const ModalEarning: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, isU
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!earningOwner || earningOwner === "" || earningOwner === "00000000-0000-0000-0000-000000000000") {
+        if (!isUpdate && (!earningOwner || earningOwner === "" || earningOwner === "00000000-0000-0000-0000-000000000000")) {
             setError("Por favor, selecione um proprietário válido.");
             return;
         }
 
         try {
             const amountFloat = parseFloat(String(amount).replace(',', '.'));
+            const ownerToSend = isUpdate ? (earningOwner || user?.id || '') : earningOwner;
 
             if (isUpdate) {
-                await updateEarning(earningId, description, amountFloat, date, active, isMonthly, earningOwner);
+                await updateEarning(earningId, description, amountFloat, date, true, periodicity === 'MENSAL', ownerToSend);
                 setSuccess("Ganho atualizado com sucesso!");
             } else {
-                    await createEarning(description, amountFloat, date, active, isMonthly, earningOwner);
+                    await createEarning(description, amountFloat, date, true, periodicity === 'MENSAL', ownerToSend);
                 setSuccess("Ganho criado com sucesso!");
             }
 
@@ -144,11 +142,8 @@ const ModalEarning: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, isU
             case 'Date':
                 setDate(value);
                 break;
-            case 'Active':
-                setActive(value === 'true');
-                break;
-            case 'IsMonthly':
-                setIsMonthly(value === 'true');
+            case 'Periodicity':
+                setPeriodicity(value);
                 break;
             default:
                 break;
@@ -283,31 +278,21 @@ const ModalEarning: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, isU
                                         className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                                     />
                                 </div>
-                                <div className='flex gap-10 items-start'>
-                                    <div>
-                                        <label htmlFor="Active" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Ativo</label>
-                                        <input 
-                                            checked={active}
-                                            onChange={(e) => setActive(e.target.checked)}
-                                            type="checkbox"
-                                            name="Active" 
-                                            id="Active" 
-                                            disabled={isViewOnly}
-                                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" 
-                                        />
-                                    </div>
-                                    <div>
-                                        <label htmlFor="IsMonthly" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Mensal</label>
-                                        <input 
-                                            checked={isMonthly}
-                                            onChange={(e) => setIsMonthly(e.target.checked)}
-                                            type="checkbox"
-                                            name="IsMonthly" 
-                                            id="IsMonthly" 
-                                            disabled={isViewOnly}
-                                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" 
-                                        />
-                                    </div>
+                                <div>
+                                    <label htmlFor="Periodicity" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Periodicidade</label>
+                                    <select 
+                                        name="Periodicity" 
+                                        id="Periodicity"
+                                        value={periodicity}
+                                        onChange={handleChange}
+                                        disabled={isViewOnly}
+                                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white"
+                                        required
+                                    >
+                                        <option value="MENSAL">Mensal</option>
+                                        <option value="SEMESTRAL">Semestral</option>
+                                        <option value="ANUAL">Anual</option>
+                                    </select>
                                 </div>    
                                 {!isViewOnly && (  
                                     <button 

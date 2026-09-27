@@ -1,15 +1,18 @@
 import instance from "./config";
 
+export interface EarningRecord {
+    id: string
+    id_earning: string
+    date: string
+    amount: number
+}
+
 export interface Earning {
     id: string
 	description: string
-	amount: number
-	date: string
-	active: boolean
-	is_monthly: boolean
-	person_id: string
-    person_name: string
-    net_salary: number
+	idUser: string
+	periodicity: string
+    record: EarningRecord
 }
 
 export interface EarningResponse {
@@ -57,8 +60,7 @@ export const updateEarning = async (
         amount,
         date,
         active,
-        is_monthly,
-        person_id
+        is_monthly
     });
         
     return response.data;
@@ -74,10 +76,11 @@ export const getEarningBy = async (id: string) => {
     return response.data;
 };
 
-export const getEarnings = async (year?: number, month?: number) => {
+export const getEarnings = async (year?: number, month?: number, idUser?: string) => {
     const params = new URLSearchParams();
     if (year) params.append('year', String(year));
     if (month) params.append('month', String(month));
+    if (idUser) params.append('idUser', idUser);
     const url = params.toString() ? `/v1/earnings?${params.toString()}` : '/v1/earnings';
     const response = await instance.get<EarningsResponse>(url);
     return response.data;
