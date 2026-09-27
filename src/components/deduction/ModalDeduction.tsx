@@ -1,5 +1,6 @@
 import { createDeduction, getDeductionById, updateDeduction } from '@/services/deduction';
 import { getEarnings, EarningsResponse, Earning } from '@/services/earning';
+import { useAuth } from '@/contexts/AuthContext';
 import axios from 'axios';
 import { useState, useEffect } from 'react';
 import React from 'react';
@@ -26,6 +27,7 @@ const ModalDeduction: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, i
     const [earningId, setEarningId] = useState('');
     const [success, setSuccess] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const { user } = useAuth();
 
      const isViewOnly = !isUpdate && deductionId !== "";
 
@@ -43,7 +45,7 @@ const ModalDeduction: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, i
         setError(null);
 
         try {
-            const earningResponse = await getEarnings();
+            const earningResponse = await getEarnings(undefined, undefined, user?.id);
             if (earningResponse && Array.isArray(earningResponse.message)) {
                 setEarningList(earningResponse);
             } else {
@@ -55,21 +57,21 @@ const ModalDeduction: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, i
 
                 const deductionResponse = await getDeductionById(deductionId);
                 const deductionData = deductionResponse.message;
-                const dateFormatted = deductionData.date_end ? deductionData.date_end.split('T')[0] : '';
+                const dateFormatted = deductionData.record?.date ? deductionData.record.date.split('T')[0] : '';
 
-                setEarningId(deductionData.earning_id || '');
+                setEarningId(deductionData.id_earning || '');
 
                 // pré-selecionar o proprietário com base no ganho carregado
                 const matchedEarning = (earningResponse?.message || []).find(
-                    (e: Earning) => e.id === deductionData.earning_id
+                    (e: Earning) => e.id === deductionData.id_earning
                 );
-                if (matchedEarning) setSelectedPersonId(matchedEarning.person_id);
+                if (matchedEarning) setSelectedPersonId(matchedEarning.idUser);
 
                 setDescription(deductionData.description);
-                setAmount(deductionData.amount?.toString() || '');
+                setAmount(deductionData.record?.amount?.toString() || '');
                 setDateEnd(dateFormatted);
                 setActive(deductionData.active);
-                setFixed(deductionData.fixed);
+                setFixed(deductionData.periodicity === 'FIXO');
             } else {
                 setButtonText("Adicionar nova dedução");
                 setEarningId("");
@@ -86,7 +88,7 @@ const ModalDeduction: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, i
         }
     };
     loadInitialData();
-}, [isOpen, isUpdate, deductionId, isViewOnly]);
+}, [isOpen, isUpdate, deductionId, isViewOnly, user?.id]);
 
         
     
@@ -238,10 +240,10 @@ const ModalDeduction: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, i
                                         <option value="">Escolha o proprietário</option>
                                         {Array.from(
                                             new Map(
-                                                (earningList.message || []).map((e: Earning) => [e.person_id, e.person_name])
+                                                (earningList.message || []).map((e: Earning) => [e.idUser, e.idUser])
                                             ).entries()
                                         ).map(([personId, personName]) => (
-                                            <option key={personId} value={personId}>{personName}</option>
+                                            <option key={personId} value={personId}>{personId}</option>
                                         ))}
                                     </select>    
                                 </div>
@@ -258,7 +260,7 @@ const ModalDeduction: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, i
                                     >
                                         <option value="">Escolha o ganho</option>
                                         {(earningList.message || [])
-                                            .filter((e: Earning) => e.person_id === selectedPersonId)
+                                            .filter((e: Earning) => e.idUser === selectedPersonId)
                                             .map((earning: Earning) => (
                                                 <option key={earning.id} value={earning.id}>{earning.description}</option>
                                             ))}
@@ -304,31 +306,17 @@ const ModalDeduction: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, i
                                         className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                                     />
                                 </div>
-                                <div className='flex gap-10 items-start'>
-                                    <div>
-                                        <label htmlFor="Active" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Ativo</label>
-                                        <input 
-                                            checked={active}
-                                            onChange={(e) => setActive(e.target.checked)}
-                                            type="checkbox"
-                                            name="Active" 
-                                            id="Active" 
-                                            disabled={isViewOnly}
-                                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" 
-                                        />
-                                    </div>
-                                    <div>
-                                        <label htmlFor="Fixed" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Fixo</label>
-                                        <input 
-                                            checked={fixed}
-                                            onChange={(e) => setFixed(e.target.checked)}
-                                            type="checkbox"
-                                            name="Fixed" 
-                                            id="Fixed" 
-                                            disabled={isViewOnly}
-                                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" 
-                                        />
-                                    </div>
+                                <div>
+                                    <label htmlFor="Fixed" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Fixo</label>
+                                    <input 
+                                        checked={fixed}
+                                        onChange={(e) => setFixed(e.target.checked)}
+                                        type="checkbox"
+                                        name="Fixed" 
+                                        id="Fixed" 
+                                        disabled={isViewOnly}
+                                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" 
+                                    />
                                 </div>
                                 {!isViewOnly && (    
                                     <button 

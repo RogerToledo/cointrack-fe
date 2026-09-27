@@ -59,3 +59,6 @@ Thumbs.db
 # package locks (only pnpm-lock.yaml is used)
 package-lock.json
 yarn.lock
+
+.config
+

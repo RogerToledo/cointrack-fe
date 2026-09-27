@@ -1,13 +1,19 @@
 import instance from "./config";
 
+export interface DeductionRecord {
+    id: string
+    id_deduction: string
+    date: string
+    amount: number
+}
+
 export interface Deduction {
     id: string
 	description: string
-	amount: number
-	fixed: boolean
+	periodicity: string
     active: boolean
-	date_end: string
-    earning_id: string
+    id_earning: string
+    record: DeductionRecord
 }
 
 export interface DeductionResponse {
@@ -72,10 +78,11 @@ export const getDeductionById = async (id: string) => {
     return response.data;
 };
 
-export const getDeductions = async (year?: number, month?: number) => {
+export const getDeductions = async (year?: number, month?: number, idUser?: string) => {
     const params = new URLSearchParams();
     if (year) params.append('year', String(year));
     if (month) params.append('month', String(month));
+    if (idUser) params.append('idUser', idUser);
     const url = params.toString() ? `/v1/deductions?${params.toString()}` : '/v1/deductions';
     const response = await instance.get<DeductionsResponse>(url);
     return response.data;
