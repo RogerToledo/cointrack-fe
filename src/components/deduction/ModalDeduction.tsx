@@ -1,7 +1,9 @@
 import { createDeduction, getDeductionById, updateDeduction } from '@/services/deduction';
 import { getEarnings, EarningsResponse, Earning } from '@/services/earning';
 import { useAuth } from '@/contexts/AuthContext';
-import axios from 'axios';
+import { useFamily } from '@/contexts/FamilyContext';
+import { Person } from '@/services/person';
+import { extractErrorMessage, logApiError } from '@/utils/errorMessage';
 import { useState, useEffect } from 'react';
 import React from 'react';
 
@@ -11,23 +13,26 @@ interface ModalProps {
     onCardAction: () => void;
     isUpdate: boolean;
     deductionId: string;
+    selectedMonth: string;
 }
 
-const ModalDeduction: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, isUpdate, deductionId}) => {
+const ModalDeduction: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, isUpdate, deductionId, selectedMonth}) => {
     const [buttonText, setButtonText] = useState("Adicionar nova dedução"); 
     const [earningList, setEarningList] = useState<EarningsResponse>({ 
         message: [],
         statusCode: 0});
     const [selectedPersonId, setSelectedPersonId] = useState('');
+    const [ownerList, setOwnerList] = useState<Person[]>([]);
     const [description, setDescription] = useState('');
     const [amount, setAmount] = useState('');
     const [dateEnd, setDateEnd] = useState('');
     const [active, setActive] = useState(false);
-    const [fixed, setFixed] = useState(false);
+    const [periodicity, setPeriodicity] = useState('MENSAL');
     const [earningId, setEarningId] = useState('');
     const [success, setSuccess] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const { user } = useAuth();
+    const { selectedFamily } = useFamily();
 
      const isViewOnly = !isUpdate && deductionId !== "";
 
@@ -45,11 +50,31 @@ const ModalDeduction: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, i
         setError(null);
 
         try {
-            const earningResponse = await getEarnings(undefined, undefined, user?.id);
-            if (earningResponse && Array.isArray(earningResponse.message)) {
-                setEarningList(earningResponse);
-            } else {
-                setEarningList({ message: [], statusCode: 200 });
+            // Usar membros da família ou apenas o usuário logado
+            let owners: Person[] = [];
+            if (selectedFamily?.members && selectedFamily.members.length > 0) {
+                owners = selectedFamily.members.map(m => ({ id: m.person_id, name: m.person_name }));
+            } else if (user) {
+                owners = [{ id: user.id, name: user.name }];
+            }
+            setOwnerList(owners);
+
+            // Lista de ganhos limitada ao mês selecionado: sem esse filtro o select
+            // oferece ganhos de outros períodos e permite criar dedução apontando
+            // para um ganho que não existe mais.
+            let earningsForMatch: Earning[] = [];
+            try {
+                const [year, month] = selectedMonth.split('-').map(Number);
+                const earningResponse = await getEarnings(year, month, user?.id);
+                if (earningResponse && Array.isArray(earningResponse.message)) {
+                    setEarningList(earningResponse);
+                    earningsForMatch = earningResponse.message;
+                } else {
+                    setEarningList({ message: [], statusCode: 200 });
+                }
+            } catch (earningError) {
+                logApiError('getEarnings (deduction modal)', earningError);
+                setEarningList({ message: [], statusCode: 0 });
             }
 
             if (deductionId && deductionId !== "" && (isUpdate || isViewOnly)) {
@@ -62,7 +87,7 @@ const ModalDeduction: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, i
                 setEarningId(deductionData.id_earning || '');
 
                 // pré-selecionar o proprietário com base no ganho carregado
-                const matchedEarning = (earningResponse?.message || []).find(
+                const matchedEarning = earningsForMatch.find(
                     (e: Earning) => e.id === deductionData.id_earning
                 );
                 if (matchedEarning) setSelectedPersonId(matchedEarning.idUser);
@@ -71,7 +96,7 @@ const ModalDeduction: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, i
                 setAmount(deductionData.record?.amount?.toString() || '');
                 setDateEnd(dateFormatted);
                 setActive(deductionData.active);
-                setFixed(deductionData.periodicity === 'FIXO');
+                setPeriodicity(deductionData.periodicity || 'MENSAL');
             } else {
                 setButtonText("Adicionar nova dedução");
                 setEarningId("");
@@ -80,7 +105,7 @@ const ModalDeduction: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, i
                 setAmount('');
                 setDateEnd("");
                 setActive(false);
-                setFixed(false);
+                setPeriodicity('MENSAL');
             }
         } catch (error) {
             setError("Falha ao carregar informações do servidor.");
@@ -88,21 +113,41 @@ const ModalDeduction: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, i
         }
     };
     loadInitialData();
-}, [isOpen, isUpdate, deductionId, isViewOnly, user?.id]);
+    }, [isOpen, isUpdate, deductionId, isViewOnly, user?.id, selectedMonth]);
 
         
     
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
+        if (!dateEnd) {
+            setError("Por favor, selecione uma data válida.");
+            return;
+        }
+
+        if (!earningId) {
+            setError("Por favor, selecione um ganho válido.");
+            return;
+        }
+
         try {
             const amountFloat = parseFloat(String(amount).replace(',', '.'));
 
+            const payload = {
+                description,
+                idEarning: earningId,
+                periodicity,
+                record: {
+                    date: dateEnd,
+                    amount: amountFloat,
+                },
+            };
+
             if (isUpdate) {
-                await updateDeduction(deductionId, description, amountFloat, active, fixed, dateEnd, earningId);
+                await updateDeduction(deductionId, payload);
                 setSuccess("Dedução atualizada com sucesso!");
             } else {
-                await createDeduction(description, amountFloat, active, fixed, dateEnd, earningId);
+                await createDeduction(payload);
                 setSuccess("Dedução criada com sucesso!");
             }
 
@@ -111,14 +156,8 @@ const ModalDeduction: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, i
                 onClose();
             }, 3000);  
         } catch (err) {
-            console.error("Error creating deduction", err);
-
-            if (axios.isAxiosError(err)) {
-                const apiMessage = err.response?.data?.message;
-                setError(apiMessage || "Ocorreu um erro inesperado.");
-            } else {
-                setError("Ocorreu um erro inesperado");
-            }
+            logApiError('createDeduction', err);
+            setError(extractErrorMessage(err));
         }
     }
 
@@ -147,8 +186,8 @@ const ModalDeduction: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, i
             case 'Active':
                 setActive(value === 'true');
                 break;
-            case 'Fixed':
-                setFixed(value === 'true');
+            case 'Periodicity':
+                setPeriodicity(value);
                 break;
             default:
                 break;
@@ -238,12 +277,8 @@ const ModalDeduction: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, i
                                         required
                                     >
                                         <option value="">Escolha o proprietário</option>
-                                        {Array.from(
-                                            new Map(
-                                                (earningList.message || []).map((e: Earning) => [e.idUser, e.idUser])
-                                            ).entries()
-                                        ).map(([personId, personName]) => (
-                                            <option key={personId} value={personId}>{personId}</option>
+                                        {ownerList.map((owner) => (
+                                            <option key={owner.id} value={owner.id}>{owner.name}</option>
                                         ))}
                                     </select>    
                                 </div>
@@ -303,20 +338,25 @@ const ModalDeduction: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, i
                                         value={dateEnd}
                                         onChange={handleChange}
                                         disabled={isViewOnly}
+                                        required
                                         className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                                     />
                                 </div>
                                 <div>
-                                    <label htmlFor="Fixed" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Fixo</label>
-                                    <input 
-                                        checked={fixed}
-                                        onChange={(e) => setFixed(e.target.checked)}
-                                        type="checkbox"
-                                        name="Fixed" 
-                                        id="Fixed" 
+                                    <label htmlFor="Periodicity" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Periodicidade</label>
+                                    <select
+                                        name="Periodicity"
+                                        id="Periodicity"
+                                        value={periodicity}
+                                        onChange={handleChange}
                                         disabled={isViewOnly}
-                                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" 
-                                    />
+                                        required
+                                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white"
+                                    >
+                                        <option value="MENSAL">Mensal</option>
+                                        <option value="SEMESTRAL">Semestral</option>
+                                        <option value="ANUAL">Anual</option>
+                                    </select>
                                 </div>
                                 {!isViewOnly && (    
                                     <button 

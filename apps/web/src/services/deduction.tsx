@@ -26,50 +26,39 @@ export interface DeductionsResponse {
     statusCode: number;
 }
 
-export const createDeduction = async (
-    description: string, 
-    amount: number, 
-    fixed: boolean,
-    active: boolean,
-    date_end: string,   
-    earning_id: string
-) => {
-    const response = await instance.post('/v1/deductions', {
-        description,
-        amount,
-        fixed,
-        active,
-        date_end,
-        earning_id
-    });
+export interface DeductionPayload {
+    description: string;
+    idEarning: string;
+    periodicity: string;
+    record: {
+        date: string;
+        amount: number;
+    };
+}
+
+export const createDeduction = async (payload: DeductionPayload) => {
+    const response = await instance.post('/v1/deductions', payload);
 
     return response.data;
 };
 
-export const updateDeduction = async (
-    id: string,
-    description: string, 
-    amount: number, 
-    fixed: boolean, 
-    active: boolean,
-    date_end: string,
-    earning_id: string
-) => {
+export const updateDeduction = async (id: string, payload: DeductionPayload) => {
+    // O PUT exige `id_earning` (snake_case), enquanto o POST exige `idEarning`
+    // (camelCase). A traducao fica no service para o modal nao precisar saber.
+    const { idEarning, ...rest } = payload;
     const response = await instance.put(`/v1/deductions`, {
-        id,
-        description,
-        amount,
-        fixed,
-        active,
-        date_end,
-        earning_id
+        ...rest,
+        id: id,
+        id_earning: idEarning
     });
         
     return response.data;
 }
 
-export const deleteDeduction = async (id: string) => {
-    const response = await instance.delete(`/v1/deductions/${id}`);
+export const deleteDeduction = async (id: string, keepHistory = false) => {
+    const response = await instance.delete(`/v1/deductions/${id}`, {
+        params: { keepHistory },
+    });
     return response.data;
 }
 

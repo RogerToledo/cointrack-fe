@@ -3,6 +3,7 @@ import { getDeductions, deleteDeduction, DeductionsResponse} from "@/services/de
 import { getEarnings, EarningsResponse } from "@/services/earning";
 import { useAuth } from "@/contexts/AuthContext";
 import ModalDeduction from "./ModalDeduction";
+import ModalConfirmDelete from "@/components/common/ModalConfirmDelete";
 import axios from "axios";
 import { Eye, Pencil, Trash2, Plus, Receipt, AlertCircle, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
@@ -26,6 +27,8 @@ function Deduction() {
     const [isUpdate, setIsUpdate] = useState<boolean>(false);
     const [deductionId, setDeductionId] = useState<string>("");
     const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonth);
+    const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+    const [isDeleting, setIsDeleting] = useState<boolean>(false);
     const { user } = useAuth();
 
     const openModal = () => setIsModalOpen(true);
@@ -73,13 +76,13 @@ function Deduction() {
         openModal();
     }
 
-    const handleDelete = async (id: string) => {
-        if (!window.confirm('Tem certeza que deseja deletar esta dedução?')) {
-            return;
-        }
-        
+    const handleDelete = async (keepHistory: boolean) => {
+        if (!deleteTargetId) return;
+
+        setIsDeleting(true);
         try {
-            await deleteDeduction(id)
+            await deleteDeduction(deleteTargetId, keepHistory)
+            setDeleteTargetId(null);
             await fetchData();
         } catch (err) {
             console.error(err);
@@ -89,7 +92,9 @@ function Deduction() {
             } else {
                 setError("Ocorreu um erro inesperado.");
             }
-        };
+        } finally {
+            setIsDeleting(false);
+        }
     } 
 
     const handleOpenNew = () => {
@@ -236,7 +241,7 @@ function Deduction() {
                                                 </button>
                                                 <button 
                                                     type="button" 
-                                                    onClick={() => handleDelete(deduction.id)}
+                                                    onClick={() => setDeleteTargetId(deduction.id)}
                                                     className="p-2 rounded-lg text-muted hover:text-danger hover:bg-danger-light transition-colors"
                                                     title="Excluir desconto"
                                                 >
@@ -258,6 +263,15 @@ function Deduction() {
                 onCardAction={handleDeduction}
                 isUpdate={isUpdate}
                 deductionId={deductionId}
+                selectedMonth={selectedMonth}
+            />
+
+            <ModalConfirmDelete
+                isOpen={deleteTargetId !== null}
+                onClose={() => setDeleteTargetId(null)}
+                onConfirm={handleDelete}
+                message="Tem certeza que deseja deletar esta dedução?"
+                isLoading={isDeleting}
             />
         </div>
     )

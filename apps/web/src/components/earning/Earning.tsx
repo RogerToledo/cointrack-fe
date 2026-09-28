@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { getEarnings, deleteEarning, EarningsResponse} from "@/services/earning";
 import { useAuth } from "@/contexts/AuthContext";
 import ModalEarning from "./ModalEarning";
+import ModalConfirmDelete from "@/components/common/ModalConfirmDelete";
 import axios from "axios";
 import { Eye, Pencil, Trash2, Plus, DollarSign, AlertCircle, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
@@ -21,6 +22,8 @@ function Earning() {
     const [isUpdate, setIsUpdate] = useState<boolean>(false);
     const [earningId, setEarningId] = useState<string>("");
     const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonth);
+    const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+    const [isDeleting, setIsDeleting] = useState<boolean>(false);
     const { user } = useAuth();
 
     const openModal = () => setIsModalOpen(true);
@@ -59,13 +62,13 @@ function Earning() {
         openModal();
     }
 
-    const handleDelete = async (id: string) => {
-        if (!window.confirm('Tem certeza que deseja deletar este ganho?')) {
-            return;
-        }
-        
+    const handleDelete = async (keepHistory: boolean) => {
+        if (!deleteTargetId) return;
+
+        setIsDeleting(true);
         try {
-            await deleteEarning(id)
+            await deleteEarning(deleteTargetId, keepHistory)
+            setDeleteTargetId(null);
             await fetchData();
         } catch (err) {
             console.error(err);
@@ -75,8 +78,10 @@ function Earning() {
             } else {
                 setError("Ocorreu um erro inesperado.");
             }
-        };
-    } 
+        } finally {
+            setIsDeleting(false);
+        }
+    }
 
     const handleOpenNew = () => {
         setEarningId("");
@@ -219,7 +224,7 @@ function Earning() {
                                                 </button>
                                                 <button 
                                                     type="button" 
-                                                    onClick={() => handleDelete(earning.id)}
+                                                    onClick={() => setDeleteTargetId(earning.id)}
                                                     className="p-2 rounded-lg text-muted hover:text-danger hover:bg-danger-light transition-colors"
                                                     title="Excluir ganho"
                                                 >
@@ -241,6 +246,14 @@ function Earning() {
                 onCardAction={handleEarning}
                 isUpdate={isUpdate}
                 earningId={earningId}
+            />
+
+            <ModalConfirmDelete
+                isOpen={deleteTargetId !== null}
+                onClose={() => setDeleteTargetId(null)}
+                onConfirm={handleDelete}
+                message="Tem certeza que deseja deletar este ganho?"
+                isLoading={isDeleting}
             />
         </div>
     )

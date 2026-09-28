@@ -2,6 +2,7 @@ import { createEarning, getEarningBy, updateEarning } from '@/services/earning';
 import { Person } from '@/services/person';
 import { useFamily } from '@/contexts/FamilyContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { extractErrorMessage, logApiError } from '@/utils/errorMessage';
 import axios from 'axios';
 import { useState, useEffect } from 'react';
 import React from 'react';
@@ -99,15 +100,30 @@ const ModalEarning: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, isU
             return;
         }
 
+        if (!date) {
+            setError("Por favor, selecione uma data válida.");
+            return;
+        }
+
         try {
             const amountFloat = parseFloat(String(amount).replace(',', '.'));
             const ownerToSend = isUpdate ? (earningOwner || user?.id || '') : earningOwner;
 
+            const payload = {
+                description,
+                idUser: ownerToSend,
+                periodicity,
+                record: {
+                    date,
+                    amount: amountFloat,
+                },
+            };
+
             if (isUpdate) {
-                await updateEarning(earningId, description, amountFloat, date, true, periodicity === 'MENSAL', ownerToSend);
+                await updateEarning(earningId, payload);
                 setSuccess("Ganho atualizado com sucesso!");
             } else {
-                    await createEarning(description, amountFloat, date, true, periodicity === 'MENSAL', ownerToSend);
+                await createEarning(payload);
                 setSuccess("Ganho criado com sucesso!");
             }
 
@@ -116,14 +132,8 @@ const ModalEarning: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, isU
                 onClose();
             }, 3000);  
         } catch (err) {
-            console.error("Error creating earning", err);
-
-            if (axios.isAxiosError(err)) {
-                const apiMessage = err.response?.data?.message;
-                setError(apiMessage || "Ocorreu um erro inesperado.");
-            } else {
-                setError("Ocorreu um erro inesperado");
-            }
+            logApiError('createEarning', err);
+            setError(extractErrorMessage(err));
         }
     }
 
@@ -275,6 +285,7 @@ const ModalEarning: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, isU
                                         value={date}
                                         onChange={handleChange}
                                         disabled={isViewOnly}
+                                        required
                                         className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                                     />
                                 </div>
