@@ -50,8 +50,10 @@ export const updateEarning = async (id: string, payload: EarningPayload) => {
     return response.data;
 }
 
-export const deleteEarning = async (id: string) => {
-    const response = await instance.delete(`/v1/earnings/${id}`);
+export const deleteEarning = async (id: string, keepHistory = false) => {
+    const response = await instance.delete(`/v1/earnings/${id}`, {
+        params: { keepHistory },
+    });
     return response.data;
 }
 

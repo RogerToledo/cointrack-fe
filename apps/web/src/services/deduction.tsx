@@ -55,8 +55,10 @@ export const updateDeduction = async (id: string, payload: DeductionPayload) => 
     return response.data;
 }
 
-export const deleteDeduction = async (id: string) => {
-    const response = await instance.delete(`/v1/deductions/${id}`);
+export const deleteDeduction = async (id: string, keepHistory = false) => {
+    const response = await instance.delete(`/v1/deductions/${id}`, {
+        params: { keepHistory },
+    });
     return response.data;
 }
 
