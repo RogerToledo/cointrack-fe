@@ -32,7 +32,17 @@ const instance = axios.create({
   instance.interceptors.response.use(
     response => response,
     error => {
-      console.error('API Error Response:', error);
+      if (error.response) {
+        console.error(`[API ${error.response.status}] ${error.config?.method?.toUpperCase()} ${error.config?.url}`, {
+          payload: error.config?.data,
+          body: error.response.data,
+        });
+      } else {
+        console.error(`[API] ${error.config?.method?.toUpperCase()} ${error.config?.url} falhou sem resposta`, {
+          code: error.code,
+          message: error.message,
+        });
+      }
       
       // Se receber 401 (Unauthorized), limpar dados e redirecionar para login
       // EXCETO se for em rotas de autenticação (para permitir mostrar mensagem de erro)

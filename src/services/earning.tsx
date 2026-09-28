@@ -25,42 +25,26 @@ export interface EarningsResponse {
     statusCode: number;
 }
 
-export const createEarning = async (
-    description: string, 
-    amount: number, 
-    date: string, 
-    active: boolean,
-    is_monthly: boolean,
-    person_id: string
-) => {
-    const response = await instance.post('/v1/earnings', {
-        description,
-        amount,
-        date,
-        active,
-        is_monthly,
-        person_id
-    });
+export interface EarningPayload {
+    description: string;
+    idUser: string;
+    periodicity: string;
+    record: {
+        date: string;
+        amount: number;
+    };
+}
+
+export const createEarning = async (payload: EarningPayload) => {
+    const response = await instance.post('/v1/earnings', payload);
 
     return response.data;
 };
 
-export const updateEarning = async (
-    id: string,
-    description: string, 
-    amount: number, 
-    date: string, 
-    active: boolean,
-    is_monthly: boolean,
-    person_id: string
-) => {
+export const updateEarning = async (id: string, payload: EarningPayload) => {
     const response = await instance.put(`/v1/earnings`, {
         id,
-        description,
-        amount,
-        date,
-        active,
-        is_monthly
+        ...payload,
     });
         
     return response.data;

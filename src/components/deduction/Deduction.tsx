@@ -258,6 +258,7 @@ function Deduction() {
                 onCardAction={handleDeduction}
                 isUpdate={isUpdate}
                 deductionId={deductionId}
+                selectedMonth={selectedMonth}
             />
         </div>
     )
