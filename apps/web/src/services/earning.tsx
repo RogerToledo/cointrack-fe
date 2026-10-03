@@ -11,6 +11,7 @@ export interface Earning {
     id: string
 	description: string
 	idUser: string
+	personName?: string
 	periodicity: string
     record: EarningRecord
 }
@@ -35,8 +36,34 @@ export interface EarningPayload {
     };
 }
 
+// Definicao de ganho, sem lancamento mensal. O `record` e lancado depois
+// via POST /v1/earnings/records.
+export interface EarningDefinitionPayload {
+    description: string;
+    idUser: string;
+    periodicity: string;
+}
+
+export interface EarningRecordPayload {
+    id_earning: string;
+    date: string;
+    amount: number;
+}
+
 export const createEarning = async (payload: EarningPayload) => {
     const response = await instance.post('/v1/earnings', payload);
+
+    return response.data;
+};
+
+export const createEarningDefinition = async (payload: EarningDefinitionPayload) => {
+    const response = await instance.post('/v1/earnings', payload);
+
+    return response.data;
+};
+
+export const createEarningRecord = async (payload: EarningRecordPayload) => {
+    const response = await instance.post('/v1/earnings/records', payload);
 
     return response.data;
 };

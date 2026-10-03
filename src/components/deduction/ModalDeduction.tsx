@@ -1,11 +1,13 @@
-import { createDeduction, getDeductionById, updateDeduction } from '@/services/deduction';
+import { createDeductionRecord, getDeductionById, updateDeduction } from '@/services/deduction';
 import { getEarnings, EarningsResponse, Earning } from '@/services/earning';
+import { getDeductions, DeductionsResponse, Deduction } from '@/services/deduction';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFamily } from '@/contexts/FamilyContext';
 import { Person } from '@/services/person';
 import { extractErrorMessage, logApiError } from '@/utils/errorMessage';
 import { useState, useEffect } from 'react';
 import React from 'react';
+import ModalDeductionNew from './ModalDeductionNew';
 
 interface ModalProps {
     isOpen: boolean;
@@ -31,10 +33,14 @@ const ModalDeduction: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, i
     const [earningId, setEarningId] = useState('');
     const [success, setSuccess] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [deductionOptions, setDeductionOptions] = useState<Deduction[]>([]);
+    const [selectedDeductionId, setSelectedDeductionId] = useState('');
+    const [isNewModalOpen, setIsNewModalOpen] = useState(false);
     const { user } = useAuth();
     const { selectedFamily } = useFamily();
 
      const isViewOnly = !isUpdate && deductionId !== "";
+     const isCreateMode = !isUpdate && !isViewOnly;
 
      const getTitle = () => {
         if (isUpdate) return "Atualizar Dedução";
@@ -106,9 +112,24 @@ const ModalDeduction: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, i
                 setDateEnd("");
                 setActive(false);
                 setPeriodicity('MENSAL');
+                setSelectedDeductionId('');
+
+                // No cadastro a descricao e escolhida entre as deducoes ja
+                // existentes do usuario, para lancar um novo record mensal.
+                try {
+                    const allDeductions = await getDeductions(undefined, undefined, user?.id);
+                    if (allDeductions && Array.isArray(allDeductions.message)) {
+                        setDeductionOptions(allDeductions.message);
+                    } else {
+                        setDeductionOptions([]);
+                    }
+                } catch (deductionError) {
+                    logApiError('getDeductions (deduction modal)', deductionError);
+                    setDeductionOptions([]);
+                }
             }
         } catch (error) {
-            setError("Falha ao carregar informações do servidor.");
+            setError(extractErrorMessage(error) || "Falha ao carregar informações do servidor.");
             console.error(error);
         }
     };
@@ -120,46 +141,71 @@ const ModalDeduction: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, i
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!dateEnd) {
-            setError("Por favor, selecione uma data válida.");
+        if (isCreateMode && !selectedDeductionId) {
+            setError("Selecione uma dedução ou use o botão + para cadastrar uma nova.");
             return;
         }
 
-        if (!earningId) {
+        if (!isCreateMode && !earningId) {
             setError("Por favor, selecione um ganho válido.");
+            return;
+        }
+
+        if (!dateEnd) {
+            setError("Por favor, selecione uma data válida.");
             return;
         }
 
         try {
             const amountFloat = parseFloat(String(amount).replace(',', '.'));
 
-            const payload = {
-                description,
-                idEarning: earningId,
-                periodicity,
-                record: {
+            if (isCreateMode) {
+                // Lancamento mensal sobre uma deducao ja cadastrada.
+                await createDeductionRecord({
+                    id_deduction: selectedDeductionId,
                     date: dateEnd,
                     amount: amountFloat,
-                },
-            };
+                });
+                setSuccess("Lançamento criado com sucesso!");
+            } else {
+                const payload = {
+                    description,
+                    idEarning: earningId,
+                    periodicity,
+                    record: {
+                        date: dateEnd,
+                        amount: amountFloat,
+                    },
+                };
 
-            if (isUpdate) {
                 await updateDeduction(deductionId, payload);
                 setSuccess("Dedução atualizada com sucesso!");
-            } else {
-                await createDeduction(payload);
-                setSuccess("Dedução criada com sucesso!");
             }
 
             setTimeout(() => {
-                onCardAction();;
+                onCardAction();
                 onClose();
-            }, 3000);  
+            }, 3000);
         } catch (err) {
-            logApiError('createDeduction', err);
+            logApiError(isCreateMode ? 'createDeductionRecord' : 'updateDeduction', err);
             setError(extractErrorMessage(err));
         }
     }
+
+    const handleDeductionSelect = (id: string) => {
+        setSelectedDeductionId(id);
+
+        const found = deductionOptions.find(d => d.id === id);
+        if (found) {
+            setDescription(found.description);
+            setPeriodicity(found.periodicity || 'MENSAL');
+            setEarningId(found.id_earning);
+        } else {
+            setDescription('');
+            setPeriodicity('MENSAL');
+            setEarningId('');
+        }
+    };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -272,7 +318,7 @@ const ModalDeduction: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, i
                                         id="PersonId"
                                         value={selectedPersonId}
                                         onChange={handleChange}
-                                        disabled={isViewOnly}
+                                        disabled={isViewOnly || isCreateMode}
                                         className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white"
                                         required
                                     >
@@ -289,7 +335,7 @@ const ModalDeduction: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, i
                                         id="EarningId"
                                         value={earningId}
                                         onChange={handleChange}
-                                        disabled={isViewOnly || !selectedPersonId}
+                                        disabled={isViewOnly || isCreateMode || !selectedPersonId}
                                         className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white"
                                         required
                                     >
@@ -303,17 +349,43 @@ const ModalDeduction: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, i
                                 </div>
                                 <div>
                                     <label htmlFor="Description" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Descrição</label>
-                                    <input 
-                                        type="text" 
-                                        name="Description"
-                                        id="Description" 
-                                        value={description}
-                                        onChange={handleChange}
-                                        disabled={isViewOnly}
-                                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white" 
-                                        placeholder="Descrição da dedução" 
-                                        required 
-                                    />
+                                    {isCreateMode ? (
+                                        <div className="flex gap-2">
+                                            <select
+                                                name="Description"
+                                                id="Description"
+                                                value={selectedDeductionId}
+                                                onChange={(e) => handleDeductionSelect(e.target.value)}
+                                                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                                required
+                                            >
+                                                <option value="">Escolha a dedução</option>
+                                                {deductionOptions.map((deduction: Deduction) => (
+                                                    <option key={deduction.id} value={deduction.id}>{deduction.description}</option>
+                                                ))}
+                                            </select>
+                                            <button
+                                                type="button"
+                                                onClick={() => setIsNewModalOpen(true)}
+                                                className="px-3 py-2.5 text-sm font-medium text-white bg-blue-700 hover:bg-blue-800 rounded-lg transition-colors shrink-0"
+                                                title="Cadastrar nova dedução"
+                                            >
+                                                +
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <input
+                                            type="text"
+                                            name="Description"
+                                            id="Description"
+                                            value={description}
+                                            onChange={handleChange}
+                                            disabled={isViewOnly}
+                                            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+                                            placeholder="Descrição da dedução"
+                                            required
+                                        />
+                                    )}
                                 </div>
                                 <div>
                                     <label htmlFor="Amount" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Valor</label>
@@ -349,7 +421,7 @@ const ModalDeduction: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, i
                                         id="Periodicity"
                                         value={periodicity}
                                         onChange={handleChange}
-                                        disabled={isViewOnly}
+                                        disabled={isViewOnly || isCreateMode}
                                         required
                                         className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white"
                                     >
@@ -368,7 +440,16 @@ const ModalDeduction: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, i
                             </form>
                         </div>
                     </div>
-            </div> 
+            </div>
+
+            <ModalDeductionNew
+                isOpen={isNewModalOpen}
+                onClose={() => setIsNewModalOpen(false)}
+                onCreated={() => {
+                    setIsNewModalOpen(false);
+                    onCardAction();
+                }}
+            />
         </div>
     );
 };
