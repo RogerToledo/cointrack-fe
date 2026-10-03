@@ -13,6 +13,7 @@ export interface Deduction {
 	periodicity: string
     active: boolean
     id_earning: string
+    personName?: string
     record: DeductionRecord
 }
 
@@ -35,6 +36,32 @@ export interface DeductionPayload {
         amount: number;
     };
 }
+
+// Definicao de deducao, sem lancamento mensal. O `record` e lancado depois
+// via POST /v1/deductions/records.
+export interface DeductionDefinitionPayload {
+    description: string;
+    idEarning: string;
+    periodicity: string;
+}
+
+export interface DeductionRecordPayload {
+    id_deduction: string;
+    date: string;
+    amount: number;
+}
+
+export const createDeductionDefinition = async (payload: DeductionDefinitionPayload) => {
+    const response = await instance.post('/v1/deductions', payload);
+
+    return response.data;
+};
+
+export const createDeductionRecord = async (payload: DeductionRecordPayload) => {
+    const response = await instance.post('/v1/deductions/records', payload);
+
+    return response.data;
+};
 
 export const createDeduction = async (payload: DeductionPayload) => {
     const response = await instance.post('/v1/deductions', payload);
