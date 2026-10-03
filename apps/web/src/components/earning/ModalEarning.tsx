@@ -5,7 +5,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { extractErrorMessage, logApiError } from '@/utils/errorMessage';
 import { useState, useEffect } from 'react';
 import React from 'react';
-import ModalEarningNew from './ModalEarningNew';
 
 interface ModalProps {
     isOpen: boolean;
@@ -15,31 +14,65 @@ interface ModalProps {
     earningId: string;
 }
 
+const INVALID_OWNER = "00000000-0000-0000-0000-000000000000";
+
+function toNumber(value: string): number {
+    return parseFloat(String(value).replace(/\./g, '').replace(',', '.'));
+}
+
 const ModalEarning: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, isUpdate, earningId}) => {
-    const [buttonText, setButtonText] = useState("Adicionar novo ganho"); 
+    const [buttonText, setButtonText] = useState("Adicionar novo registro");
     const [earningOwner, setEarningOwner] = useState('');
     const [description, setDescription] = useState('');
-    const [amount, setAmount] = useState('');
+    const [grossPay, setGrossPay] = useState('');
+    const [netPay, setNetPay] = useState('');
     const [date, setDate] = useState('');
     const [periodicity, setPeriodicity] = useState('MENSAL');
     const [ownerList, setOwnerList] = useState<Person[]>([]);
     const [earningOptions, setEarningOptions] = useState<Earning[]>([]);
     const [selectedEarningId, setSelectedEarningId] = useState('');
-    const [isNewModalOpen, setIsNewModalOpen] = useState(false);
     const [success, setSuccess] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const { selectedFamily } = useFamily();
     const { user } = useAuth();
 
     const isViewOnly = !isUpdate && earningId !== "";
-   const isCreateMode = !isUpdate && !isViewOnly;
+    const isCreateMode = !isUpdate && !isViewOnly;
 
-     const getTitle = () => {
+    // O PUT /v1/earnings so atualiza a definicao do ganho. Bruto, liquido e data
+    // pertencem ao lancamento mensal, entao ficam somente leitura ate existir
+    // edicao de registro. No cadastro eles liberam depois que a descricao e escolhida.
+    const recordEditable = isCreateMode && selectedEarningId !== '';
+
+    const getTitle = () => {
         if (isUpdate) return "Atualizar Ganho";
         if (isViewOnly) return "Visualizar Ganho";
-        return "Cadastro de Ganho";
+        return "Novo Registro";
     }
-    
+
+    const loadDescriptions = async (ownerId: string) => {
+        if (!ownerId || ownerId === INVALID_OWNER) {
+            setEarningOptions([]);
+            return;
+        }
+
+        try {
+            const allEarnings = await getEarnings(undefined, undefined, ownerId);
+
+            // O idUser ja vai na query, mas o filtro tambem e aplicado aqui para
+            // garantir que só entrem descrições do proprietário escolhido, mesmo
+            // se o back devolver registros de outras pessoas.
+            const owned = Array.isArray(allEarnings?.message)
+                ? allEarnings.message.filter((earning: Earning) => earning.idUser === ownerId)
+                : [];
+
+            setEarningOptions(owned);
+        } catch (earningError) {
+            logApiError('getEarnings (earning modal)', earningError);
+            setEarningOptions([]);
+        }
+    }
+
     useEffect(() => {
         const loadInitialData = async () => {
             setSuccess(null);
@@ -53,7 +86,6 @@ const ModalEarning: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, isU
                         owners = selectedFamily.members.map(m => ({ id: m.person_id, name: m.person_name }));
                     } else if (user) {
                         owners = [{ id: user.id, name: user.name }];
-                        setEarningOwner(user.id);
                     }
                     setOwnerList(owners);
 
@@ -63,35 +95,32 @@ const ModalEarning: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, isU
                         const earningResponse = await getEarningBy(earningId);
                         const earningData = earningResponse.message;
 
-                        const ownerId = earningData.idUser || "00000000-0000-0000-0000-000000000000";
+                        const ownerId = earningData.idUser || INVALID_OWNER;
                         const dateFormatted = earningData.record?.date ? earningData.record.date.split('T')[0] : '';
 
                         setEarningOwner(ownerId);
                         setDescription(earningData.description);
-                        setAmount(earningData.record?.amount?.toString() || '');
+                        setGrossPay(earningData.record?.gross_pay?.toString() || '');
+                        setNetPay(earningData.record?.net_pay?.toString() || '');
                         setDate(dateFormatted);
                         setPeriodicity(earningData.periodicity || 'MENSAL');
                     } else {
-                        setButtonText("Adicionar novo ganho");
-                        setEarningOwner("");
-                        setDescription("");
-                        setAmount('');
-                        setDate("");
+                        setButtonText("Adicionar novo registro");
+                        setDescription('');
+                        setGrossPay('');
+                        setNetPay('');
+                        setDate('');
                         setPeriodicity('MENSAL');
                         setSelectedEarningId('');
+                        setEarningOptions([]);
 
-                        // No cadastro a descricao e escolhida entre os ganhos ja
-                        // existentes do usuario, para lancar um novo record mensal.
-                        try {
-                            const allEarnings = await getEarnings(undefined, undefined, user?.id);
-                            if (allEarnings && Array.isArray(allEarnings.message)) {
-                                setEarningOptions(allEarnings.message);
-                            } else {
-                                setEarningOptions([]);
-                            }
-                        } catch (earningError) {
-                            logApiError('getEarnings (earning modal)', earningError);
-                            setEarningOptions([]);
+                        // Conta sem familia tem um unico proprietario: ja seleciona
+                        // e carrega as descricoes dele.
+                        if (owners.length === 1) {
+                            setEarningOwner(owners[0].id);
+                            await loadDescriptions(owners[0].id);
+                        } else {
+                            setEarningOwner("");
                         }
                     }
                 } catch (error) {
@@ -103,48 +132,48 @@ const ModalEarning: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, isU
         loadInitialData();
     }, [isOpen, isUpdate, earningId, isViewOnly, selectedFamily?.members, user]);
 
-        
-    
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (isCreateMode && !selectedEarningId) {
-            setError("Selecione um ganho ou use o botão + para cadastrar um novo.");
-            return;
-        }
-
-        if ((isUpdate || isViewOnly) && (!earningOwner || earningOwner === "" || earningOwner === "00000000-0000-0000-0000-000000000000")) {
+        if (!earningOwner || earningOwner === INVALID_OWNER) {
             setError("Por favor, selecione um proprietário válido.");
             return;
         }
 
-        if (!date) {
-            setError("Por favor, selecione uma data válida.");
-            return;
-        }
-
         try {
-            const amountFloat = parseFloat(String(amount).replace(',', '.'));
-
             if (isCreateMode) {
+                if (!selectedEarningId) {
+                    setError("Por favor, selecione um ganho.");
+                    return;
+                }
+
+                if (!date) {
+                    setError("Por favor, selecione uma data válida.");
+                    return;
+                }
+
+                const grossPayNumber = toNumber(grossPay);
+                const netPayNumber = toNumber(netPay);
+
+                if (isNaN(grossPayNumber) || isNaN(netPayNumber)) {
+                    setError("Por favor, preencha o bruto e o líquido com valores válidos.");
+                    return;
+                }
+
                 // Lancamento mensal sobre um ganho ja cadastrado.
                 await createEarningRecord({
                     id_earning: selectedEarningId,
                     date,
-                    amount: amountFloat,
+                    gross_pay: grossPayNumber,
+                    net_pay: netPayNumber,
                 });
-                setSuccess("Lançamento criado com sucesso!");
+                setSuccess("Registro criado com sucesso!");
             } else {
-                const ownerToSend = earningOwner || user?.id || '';
-
+                // Mesmo corpo do POST /v1/earnings.
                 await updateEarning(earningId, {
                     description,
-                    idUser: ownerToSend,
+                    id_user: earningOwner || user?.id || '',
                     periodicity,
-                    record: {
-                        date,
-                        amount: amountFloat,
-                    },
                 });
                 setSuccess("Ganho atualizado com sucesso!");
             }
@@ -159,6 +188,18 @@ const ModalEarning: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, isU
         }
     }
 
+    // Passo 2: o usuario escolhe o proprietario e as descricoes dele sao carregadas.
+    const handleOwnerSelect = async (id: string) => {
+        setEarningOwner(id);
+        setSelectedEarningId('');
+        setDescription('');
+        setPeriodicity('MENSAL');
+        setGrossPay('');
+        setNetPay('');
+        await loadDescriptions(id);
+    }
+
+    // Passo 4: a descricao define a periodicidade e libera bruto e liquido.
     const handleEarningSelect = (id: string) => {
         setSelectedEarningId(id);
 
@@ -166,12 +207,11 @@ const ModalEarning: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, isU
         if (found) {
             setDescription(found.description);
             setPeriodicity(found.periodicity || 'MENSAL');
-            setEarningOwner(found.idUser);
         } else {
             setDescription('');
             setPeriodicity('MENSAL');
         }
-    };
+    }
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -182,8 +222,11 @@ const ModalEarning: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, isU
             case 'Description':
                 setDescription(value);
                 break;
-            case 'Amount':
-                setAmount(value);
+            case 'GrossPay':
+                setGrossPay(value);
+                break;
+            case 'NetPay':
+                setNetPay(value);
                 break;
             case 'Date':
                 setDate(value);
@@ -194,17 +237,17 @@ const ModalEarning: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, isU
             default:
                 break;
         }
-    };
+    }
 
     if (!isOpen) {
         return null;
-    }    
+    }
 
     return (
         <div className="fixed inset-0 flex items-center justify-center z-50">
         <div className="fixed inset-0 bg-black opacity-50" onClick={onClose}></div>
             {/* Main modal */}
-            
+
                 <div className="relative p-4 w-full max-w-md max-h-full">
                     {/*Modal content */}
                     <div className="relative bg-white rounded-lg shadow-sm dark:bg-gray-700">
@@ -231,8 +274,8 @@ const ModalEarning: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, isU
                                     <div className="ms-3 text-sm font-medium">
                                         {success}
                                     </div>
-                                    <button 
-                                        type="button" 
+                                    <button
+                                        type="button"
                                         onClick={() => setSuccess(null)}
                                         className="ms-auto -mx-1.5 -my-1.5 bg-green-50 text-green-500 rounded-lg focus:ring-2 focus:ring-green-400 p-1.5 hover:bg-green-200 inline-flex items-center justify-center h-8 w-8 dark:bg-gray-800 dark:text-green-400 dark:hover:bg-gray-700"
                                     >
@@ -253,9 +296,9 @@ const ModalEarning: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, isU
                                     <div className="ms-3 text-sm font-medium">
                                         {error}
                                     </div>
-                                    <button 
+                                    <button
                                         onClick={() => setError(null)}
-                                        type="button" 
+                                        type="button"
                                         className="ms-auto -mx-1.5 -my-1.5 bg-red-50 text-red-500 rounded-lg focus:ring-2 focus:ring-red-400 p-1.5 hover:bg-red-200 inline-flex items-center justify-center h-8 w-8 dark:bg-gray-800 dark:text-red-400 dark:hover:bg-gray-700" 
                                         aria-label="Close"
                                     >
@@ -269,12 +312,12 @@ const ModalEarning: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, isU
                             <form onSubmit={handleSubmit} className="space-y-4" action="#">
                                 <div>
                                     <label htmlFor="Owner" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Proprietário</label>
-                                    <select 
-                                        name="Owner" 
+                                    <select
+                                        name="Owner"
                                         id="Owner"
                                         value={earningOwner}
-                                        onChange={handleChange}
-                                        disabled={isViewOnly || isCreateMode}
+                                        onChange={(e) => isCreateMode ? handleOwnerSelect(e.target.value) : handleChange(e)}
+                                        disabled={isViewOnly}
                                         className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white"
                                         required
                                     >
@@ -282,34 +325,27 @@ const ModalEarning: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, isU
                                         {ownerList.map((owner) => (
                                             <option key={owner.id} value={owner.id}>{owner.name}</option>
                                         ))}
-                                    </select>    
+                                    </select>
                                 </div>
                                 <div>
                                     <label htmlFor="Description" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Descrição</label>
                                     {isCreateMode ? (
-                                        <div className="flex gap-2">
-                                            <select
-                                                name="Description"
-                                                id="Description"
-                                                value={selectedEarningId}
-                                                onChange={(e) => handleEarningSelect(e.target.value)}
-                                                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:text-white"
-                                                required
-                                            >
-                                                <option value="">Escolha o ganho</option>
-                                                {earningOptions.map((earning: Earning) => (
-                                                    <option key={earning.id} value={earning.id}>{earning.description}</option>
-                                                ))}
-                                            </select>
-                                            <button
-                                                type="button"
-                                                onClick={() => setIsNewModalOpen(true)}
-                                                className="px-3 py-2.5 text-sm font-medium text-white bg-blue-700 hover:bg-blue-800 rounded-lg transition-colors shrink-0"
-                                                title="Cadastrar novo ganho"
-                                            >
-                                                +
-                                            </button>
-                                        </div>
+                                        <select
+                                            name="Description"
+                                            id="Description"
+                                            value={selectedEarningId}
+                                            onChange={(e) => handleEarningSelect(e.target.value)}
+                                            disabled={!earningOwner}
+                                            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white"
+                                            required
+                                        >
+                                            <option value="">
+                                                {earningOwner ? 'Escolha o ganho' : 'Selecione um proprietário primeiro'}
+                                            </option>
+                                            {earningOptions.map((earning: Earning) => (
+                                                <option key={earning.id} value={earning.id}>{earning.description}</option>
+                                            ))}
+                                        </select>
                                     ) : (
                                         <input
                                             type="text"
@@ -318,24 +354,38 @@ const ModalEarning: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, isU
                                             value={description}
                                             onChange={handleChange}
                                             disabled={isViewOnly}
-                                            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+                                            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white" 
                                             placeholder="Descrição do ganho"
                                             required
                                         />
                                     )}
                                 </div>
                                 <div>
-                                    <label htmlFor="Amount" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Valor</label>
-                                    <input 
-                                        type="text" 
-                                        name="Amount"
-                                        id="Amount" 
-                                        value={amount}
+                                    <label htmlFor="GrossPay" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Bruto</label>
+                                    <input
+                                        type="text"
+                                        name="GrossPay"
+                                        id="GrossPay"
+                                        value={grossPay}
                                         onChange={handleChange}
-                                        disabled={isViewOnly}
+                                        disabled={!recordEditable}
                                         className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white" 
-                                        placeholder="0,00" 
-                                        required 
+                                        placeholder="0,00"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label htmlFor="NetPay" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Líquido</label>
+                                    <input
+                                        type="text"
+                                        name="NetPay"
+                                        id="NetPay"
+                                        value={netPay}
+                                        onChange={handleChange}
+                                        disabled={!recordEditable}
+                                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white" 
+                                        placeholder="0,00"
+                                        required
                                     />
                                 </div>
                                 <div>
@@ -346,11 +396,12 @@ const ModalEarning: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, isU
                                         id="Date"
                                         value={date}
                                         onChange={handleChange}
-                                        disabled={isViewOnly}
+                                        disabled={!recordEditable}
                                         required
                                         className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                                     />
                                 </div>
+                                {!isCreateMode && (
                                 <div>
                                     <label htmlFor="Periodicity" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Periodicidade</label>
                                     <select 
@@ -358,7 +409,7 @@ const ModalEarning: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, isU
                                         id="Periodicity"
                                         value={periodicity}
                                         onChange={handleChange}
-                                        disabled={isViewOnly || isCreateMode}
+                                        disabled={isViewOnly}
                                         className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white"
                                         required
                                     >
@@ -366,10 +417,11 @@ const ModalEarning: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, isU
                                         <option value="SEMESTRAL">Semestral</option>
                                         <option value="ANUAL">Anual</option>
                                     </select>
-                                </div>    
-                                {!isViewOnly && (  
-                                    <button 
-                                        type="submit" 
+                                </div>
+                                )}
+                                {!isViewOnly && (
+                                    <button
+                                        type="submit"
                                         className="w-full text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
                                         {buttonText}
                                     </button>
@@ -378,15 +430,6 @@ const ModalEarning: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, isU
                         </div>
                     </div>
             </div>
-
-            <ModalEarningNew
-                isOpen={isNewModalOpen}
-                onClose={() => setIsNewModalOpen(false)}
-                onCreated={() => {
-                    setIsNewModalOpen(false);
-                    onCardAction();
-                }}
-            />
         </div>
     );
 };

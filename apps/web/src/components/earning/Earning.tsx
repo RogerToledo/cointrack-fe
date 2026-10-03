@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
-import { getEarnings, deleteEarning, EarningsResponse} from "@/services/earning";
+import { getEarningsWithRecords, deleteEarning, EarningsResponse} from "@/services/earning";
 import { useAuth } from "@/contexts/AuthContext";
+import { formatBRL } from "@/utils/currency";
 import ModalEarning from "./ModalEarning";
 import ModalConfirmDelete from "@/components/common/ModalConfirmDelete";
 import axios from "axios";
@@ -34,7 +35,7 @@ function Earning() {
         const [year, month] = selectedMonth.split('-').map(Number);
 
         try {
-            const data = await getEarnings(year, month, user?.id);
+            const data = await getEarningsWithRecords(year, month, user?.id);
             if (data) {
                 setEarnings(data);
             }
@@ -96,16 +97,16 @@ function Earning() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-foreground">Ganhos</h1>
+                    <h1 className="text-2xl font-bold text-foreground">Registro de Ganhos</h1>
                     <p className="text-muted mt-1">Gerencie seus ganhos e receitas</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Link href="/deduction">
+                    <Link href="/earnings">
                         <button 
                             type="button" 
                             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-card text-sm font-medium text-foreground hover:bg-secondary transition-all"
                         >
-                            Deduções
+                            Ganho
                         </button>
                     </Link>
                     <button 
@@ -114,7 +115,7 @@ function Earning() {
                         onClick={handleOpenNew}
                     >
                         <Plus className="w-4 h-4" />
-                        Novo Ganho
+                        Novo Registro
                     </button>
                 </div>
             </div>
@@ -185,22 +186,24 @@ function Earning() {
                                     <th className="text-left px-6 py-4 font-semibold text-foreground">Descrição</th>
                                     <th className="text-left px-6 py-4 font-semibold text-foreground">Periodicidade</th>
                                     <th className="text-left px-6 py-4 font-semibold text-foreground">Data</th>
-                                    <th className="text-left px-6 py-4 font-semibold text-foreground">Valor</th>
+                                    <th className="text-right px-6 py-4 font-semibold text-foreground">Bruto</th>
+                                    <th className="text-right px-6 py-4 font-semibold text-foreground">Líquido</th>
+                                    <th className="text-right px-6 py-4 font-semibold text-foreground">Dedução</th>
                                     <th className="text-right px-6 py-4 font-semibold text-foreground">Ações</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border">
                                 {earnings?.message.map((earning) => (
                                     <tr key={earning.id} className="hover:bg-secondary/30 transition-colors">
-                                        <td className="px-6 py-4 font-medium text-foreground">{user?.name || '-'}</td>
+                                        <td className="px-6 py-4 font-medium text-foreground">{earning.personName || '-'}</td>
                                         <td className="px-6 py-4 text-muted">{earning.description}</td>
                                         <td className="px-6 py-4 text-muted">{earning.periodicity}</td>
                                         <td className="px-6 py-4 text-muted">
                                             {earning.record?.date ? new Date(earning.record.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '-'}
                                         </td>
-                                        <td className="px-6 py-4 font-medium text-foreground">
-                                            R$ {earning.record?.amount?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                        </td>
+                                        <td className="px-6 py-4 text-right font-medium text-foreground">{formatBRL(earning.record?.gross_pay)}</td>
+                                        <td className="px-6 py-4 text-right font-medium text-foreground">{formatBRL(earning.record?.net_pay)}</td>
+                                        <td className="px-6 py-4 text-right font-medium text-foreground">{formatBRL(earning.record?.deduction)}</td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center justify-end gap-1">
                                                 <button 
