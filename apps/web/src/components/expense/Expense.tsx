@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { getExpenses, deleteExpense, reCreateExpense, payExpense, ExpensesResponse} from "@/services/expense";
-import { getPaymentTypes, PaymentType } from "@/services/paymentType";
 import { formatBRL } from "@/utils/currency";
 import ModalExpense from "./ModalExpense";
 import ModalPayExpense from "./ModalPayExpense";
@@ -28,7 +27,6 @@ function Expense() {
     const [showRecreateModal, setShowRecreateModal] = useState<boolean>(false);
     const [paidExpenseId, setPaidExpenseId] = useState<string>("");
     const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonth);
-    const [paymentTypes, setPaymentTypes] = useState<PaymentType[]>([]);
 
     const openPayModal = (id: string) => {
         setExpenseId(id);
@@ -42,11 +40,7 @@ function Expense() {
         setError(null);
 
         try {
-            const [expenseData, paymentTypeData] = await Promise.all([getExpenses(), getPaymentTypes()]);
-
-            if (Array.isArray(paymentTypeData?.message)) {
-                setPaymentTypes(paymentTypeData.message);
-            }
+            const expenseData = await getExpenses();
 
             if (expenseData && Array.isArray(expenseData.message)) {
                 setExpenses(expenseData);
@@ -68,11 +62,18 @@ function Expense() {
         fetchData();
     }, []);
 
+// O campo `paid` do back nem sempre reflete o pagamento: a despesa da API veio
+// com `paid: false` e `payment_date` preenchida. Se ha data de pagamento, a
+// despesa esta paga.
+const isExpensePaid = (expense: ExpensesResponse['message'][number]): boolean => {
+    return Boolean(expense.paid) || Boolean(expense.payment_date);
+};
+
 // Despesas pagas ficam sempre na tela, com a tag Paga. As pendentes filtram
 // pelo mes de vencimento. O endpoint de despesas nao aceita ano/mes, entao o
 // filtro roda no cliente.
 const visibleExpenses = (Array.isArray(expenses?.message) ? expenses.message : []).filter((expense) => {
-    if (expense.paid) return true;
+    if (isExpensePaid(expense)) return true;
     if (!expense.due_date) return false;
 
     const [year, month] = selectedMonth.split('-').map(Number);
@@ -81,19 +82,9 @@ const visibleExpenses = (Array.isArray(expenses?.message) ? expenses.message : [
     return due.getUTCFullYear() === year && due.getUTCMonth() + 1 === month;
 });
 
-    const getPaymentTypeName = (id?: string) => {
-        if (!id) return '-';
-
-        const found = paymentTypes.find(type => type.id === id);
-        return found?.name || '-';
-    };
-
-    const isCreditCard = (expenseId?: string) => {
-        if (!expenseId) return false;
-
-        const found = paymentTypes.find(type => type.id === expenseId);
-        return found?.name?.toLowerCase().includes(CREDIT_CARD_LABEL) ?? false;
-    };
+const isCreditCard = (expense: ExpensesResponse['message'][number]): boolean => {
+    return expense.payment_type?.toLowerCase().includes(CREDIT_CARD_LABEL) ?? false;
+};
 
     const handleExpense = async() => {
         await fetchData();
@@ -275,7 +266,7 @@ const visibleExpenses = (Array.isArray(expenses?.message) ? expenses.message : [
                                 {visibleExpenses.map((expense) => (
                                     <tr key={expense.id} className="hover:bg-secondary/30 transition-colors">
                                         <td className="px-6 py-4 font-medium text-foreground">{expense.description}</td>
-                                        <td className="px-6 py-4 text-muted">{getPaymentTypeName(expense.payment_type_id)}</td>
+                                        <td className="px-6 py-4 text-muted">{expense.payment_type || '-'}</td>
                                         <td className="px-6 py-4 text-right text-muted">{formatBRL(expense.estimated_amount)}</td>
                                         <td className="px-6 py-4 text-right font-medium text-danger">{formatBRL(expense.amount)}</td>
                                         <td className="px-6 py-4 text-muted">
@@ -283,7 +274,7 @@ const visibleExpenses = (Array.isArray(expenses?.message) ? expenses.message : [
                                                 <span>
                                                     {expense.due_date ? new Date(expense.due_date).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '-'}
                                                 </span>
-                                                {expense.paid && (
+                                                {isExpensePaid(expense) && (
                                                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success-light text-success">
                                                         Paga
                                                     </span>
@@ -299,7 +290,7 @@ const visibleExpenses = (Array.isArray(expenses?.message) ? expenses.message : [
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center justify-end gap-1">
-                                                {!isCreditCard(expense.payment_type_id) && (
+                                                {!isCreditCard(expense) && !isExpensePaid(expense) && (
                                                     <button 
                                                         onClick={() => openPayModal(expense.id)}
                                                         className="p-2 rounded-lg text-muted hover:text-success hover:bg-success-light transition-colors"
