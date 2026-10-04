@@ -68,23 +68,17 @@ function Expense() {
         fetchData();
     }, []);
 
-// O filtro de mes roda no cliente: o endpoint de despesas nao aceita ano/mes.
-// Pendente filtra pelo vencimento; paga filtra pela data de pagamento, senao a
-// despesa sai da tela assim que o pagamento e registrado.
-const getFilterDate = (expense: ExpensesResponse['message'][number]) => {
-    if (expense.paid && expense.payment_date) return expense.payment_date;
-
-    return expense.due_date;
-};
-
+// Despesas pagas ficam sempre na tela, com a tag Paga. As pendentes filtram
+// pelo mes de vencimento. O endpoint de despesas nao aceita ano/mes, entao o
+// filtro roda no cliente.
 const visibleExpenses = (Array.isArray(expenses?.message) ? expenses.message : []).filter((expense) => {
-    const filterDate = getFilterDate(expense);
-    if (!filterDate) return false;
+    if (expense.paid) return true;
+    if (!expense.due_date) return false;
 
     const [year, month] = selectedMonth.split('-').map(Number);
-    const date = new Date(filterDate);
+    const due = new Date(expense.due_date);
 
-    return date.getUTCFullYear() === year && date.getUTCMonth() + 1 === month;
+    return due.getUTCFullYear() === year && due.getUTCMonth() + 1 === month;
 });
 
     const getPaymentTypeName = (id?: string) => {
@@ -256,8 +250,8 @@ const visibleExpenses = (Array.isArray(expenses?.message) ? expenses.message : [
                     <div className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center mx-auto mb-4">
                         <Receipt className="w-8 h-8 text-muted" />
                     </div>
-                    <h3 className="text-lg font-medium text-foreground mb-1">Nenhuma despesa cadastrada</h3>
-                    <p className="text-sm text-muted">Comece adicionando suas despesas mensais.</p>
+                    <h3 className="text-lg font-medium text-foreground mb-1">Nenhuma despesa neste mês</h3>
+                    <p className="text-sm text-muted">Ajuste o mês ou adicione uma nova despesa.</p>
                 </div>
             )}
 

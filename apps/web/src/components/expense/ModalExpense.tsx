@@ -13,6 +13,12 @@ interface ModalProps {
     expenseId: string;
 }
 
+const parseAmount = (value: string): number => {
+    const parsed = parseFloat(String(value).replace(/\./g, '').replace(',', '.'));
+
+    return isNaN(parsed) ? 0 : parsed;
+};
+
 const ModalExpense: React.FC<ModalProps> = ({ isOpen, onClose, onCardAction, isUpdate, expenseId }) => {
     // Dentro do seu componente ModalExpense
     const [description, setDescription] = useState<string>('');
@@ -104,8 +110,10 @@ const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
-        const amountFloat = parseFloat(String(amount).replace(',', '.'));
-        const estimatedAmountFloat = parseFloat(String(estimatedAmount).replace(',', '.'));
+        // O valor so e obrigatorio na edicao: no cadastro a despesa nasce como
+        // estimativa e o valor real entra quando a conta chega.
+        const amountFloat = parseAmount(amount);
+        const estimatedAmountFloat = parseAmount(estimatedAmount);
 
         if (isUpdate) {
             await updateExpense(
@@ -287,7 +295,7 @@ const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
                                             className={`bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white
                                             ${isViewOnly ? 'bg-gray-200 cursor-not-allowed opacity-50 border-gray-300' : 'bg-gray-50 border-blue-500 focus:ring-blue-500'}`} 
                                             placeholder="0,00" 
-                                            required 
+                                            required={isUpdate}
                                         />
                                     </div>
                                     <div>
