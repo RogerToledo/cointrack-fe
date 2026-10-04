@@ -68,15 +68,24 @@ function Expense() {
         fetchData();
     }, []);
 
-    // O filtro de mes roda no cliente: o endpoint de despesas nao aceita ano/mes.
-    const visibleExpenses = (Array.isArray(expenses?.message) ? expenses.message : []).filter((expense) => {
-        if (!expense.due_date) return false;
+// O filtro de mes roda no cliente: o endpoint de despesas nao aceita ano/mes.
+// Pendente filtra pelo vencimento; paga filtra pela data de pagamento, senao a
+// despesa sai da tela assim que o pagamento e registrado.
+const getFilterDate = (expense: ExpensesResponse['message'][number]) => {
+    if (expense.paid && expense.payment_date) return expense.payment_date;
 
-        const [year, month] = selectedMonth.split('-').map(Number);
-        const due = new Date(expense.due_date);
+    return expense.due_date;
+};
 
-        return due.getUTCFullYear() === year && due.getUTCMonth() + 1 === month;
-    });
+const visibleExpenses = (Array.isArray(expenses?.message) ? expenses.message : []).filter((expense) => {
+    const filterDate = getFilterDate(expense);
+    if (!filterDate) return false;
+
+    const [year, month] = selectedMonth.split('-').map(Number);
+    const date = new Date(filterDate);
+
+    return date.getUTCFullYear() === year && date.getUTCMonth() + 1 === month;
+});
 
     const getPaymentTypeName = (id?: string) => {
         if (!id) return '-';
@@ -282,7 +291,7 @@ function Expense() {
                                                 </span>
                                                 {expense.paid && (
                                                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success-light text-success">
-                                                        PAGO
+                                                        Paga
                                                     </span>
                                                 )}
                                             </div>
