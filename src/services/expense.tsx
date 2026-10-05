@@ -9,6 +9,7 @@ export interface Expense {
 	due_date:        string
 	payment_date:    string
 	payment_type_id:  string
+	payment_type:     string
 	credit_card_id:   string
 	active:         boolean
 	paid:           boolean
