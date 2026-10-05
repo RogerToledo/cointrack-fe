@@ -97,6 +97,42 @@ const isCreditCard = (expense: ExpensesResponse['message'][number]): boolean => 
     return expense.payment_type?.toLowerCase().includes(CREDIT_CARD_LABEL) ?? false;
 };
 
+<<<<<<< Updated upstream
+=======
+// O input type="month" pode ser limpo, e nesse caso selectedMonth fica "". Sem
+// periodo o backend so devolve as em aberto, entao nao ha o que filtrar.
+const parseSelectedMonth = (): [number | undefined, number | undefined] => {
+    const [year, month] = selectedMonth.split('-').map(Number);
+    if (!year || !month) return [undefined, undefined];
+    return [year, month];
+};
+
+// Linhas antigas podem ter `paid: false` com `payment_date` preenchida: o
+// backend vazava a data da recorrencia anterior na seguinte, e isso ja foi
+// corrigido em PrepareNextOccurrence. O fallback abaixo mantem a tag correta
+// nas linhas ja gravadas, que nao vao se corrigir sozinhas.
+const isExpensePaid = (expense: ExpensesResponse['message'][number]): boolean => {
+    return Boolean(expense.paid) || Boolean(expense.payment_date);
+};
+
+// O backend ja devolve so o mes pedido, pagas inclusive. Este filtro continua
+// como rede de seguranca: enquanto a request do mes novo nao volta, a tela
+// mostra o estado antigo, e sem isto apareceria despesa do mes errado.
+const visibleExpenses = (Array.isArray(expenses?.message) ? expenses.message : []).filter((expense) => {
+    const [year, month] = parseSelectedMonth();
+    if (year === undefined || month === undefined) return true;
+    if (!expense.due_date) return false;
+
+    const due = new Date(expense.due_date);
+
+    return due.getUTCFullYear() === year && due.getUTCMonth() + 1 === month;
+});
+
+const isCreditCard = (expense: ExpensesResponse['message'][number]): boolean => {
+    return expense.payment_type?.toLowerCase().includes(CREDIT_CARD_LABEL) ?? false;
+};
+
+>>>>>>> Stashed changes
     const handleExpense = async() => {
         await fetchData();
         closeModal();
