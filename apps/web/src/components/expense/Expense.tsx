@@ -40,7 +40,9 @@ function Expense() {
         setError(null);
 
         try {
-            const expenseData = await getExpenses();
+            // selectedMonth vem do input type="month" como "AAAA-MM".
+            const [year, month] = parseSelectedMonth();
+            const expenseData = await getExpenses(year, month);
 
             if (expenseData && Array.isArray(expenseData.message)) {
                 setExpenses(expenseData);
@@ -60,23 +62,32 @@ function Expense() {
 
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [selectedMonth]);
 
-// O campo `paid` do back nem sempre reflete o pagamento: a despesa da API veio
-// com `paid: false` e `payment_date` preenchida. Se ha data de pagamento, a
-// despesa esta paga.
+// O input type="month" pode ser limpo, e nesse caso selectedMonth fica "". Sem
+// periodo o backend so devolve as em aberto, entao nao ha o que filtrar.
+const parseSelectedMonth = (): [number | undefined, number | undefined] => {
+    const [year, month] = selectedMonth.split('-').map(Number);
+    if (!year || !month) return [undefined, undefined];
+    return [year, month];
+};
+
+// Linhas antigas podem ter `paid: false` com `payment_date` preenchida: o
+// backend vazava a data da recorrencia anterior na seguinte, e isso ja foi
+// corrigido em PrepareNextOccurrence. O fallback abaixo mantem a tag correta
+// nas linhas ja gravadas, que nao vao se corrigir sozinhas.
 const isExpensePaid = (expense: ExpensesResponse['message'][number]): boolean => {
     return Boolean(expense.paid) || Boolean(expense.payment_date);
 };
 
-// Despesas pagas ficam sempre na tela, com a tag Paga. As pendentes filtram
-// pelo mes de vencimento. O endpoint de despesas nao aceita ano/mes, entao o
-// filtro roda no cliente.
+// O backend ja devolve so o mes pedido, pagas inclusive. Este filtro continua
+// como rede de seguranca: enquanto a request do mes novo nao volta, a tela
+// mostra o estado antigo, e sem isto apareceria despesa do mes errado.
 const visibleExpenses = (Array.isArray(expenses?.message) ? expenses.message : []).filter((expense) => {
-    if (isExpensePaid(expense)) return true;
+    const [year, month] = parseSelectedMonth();
+    if (year === undefined || month === undefined) return true;
     if (!expense.due_date) return false;
 
-    const [year, month] = selectedMonth.split('-').map(Number);
     const due = new Date(expense.due_date);
 
     return due.getUTCFullYear() === year && due.getUTCMonth() + 1 === month;

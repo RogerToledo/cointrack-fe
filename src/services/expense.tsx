@@ -112,8 +112,16 @@ export const getExpenseById = async (id: string) => {
     return response.data;
 };
 
-export const getExpenses = async () => {
-    const response = await instance.get<ExpensesResponse>('/v1/expenses');
+// Sem ano/mes o backend devolve apenas as despesas em aberto (recorte
+// deliberado para nao despejar todo o historico recorrente), o que esconde as
+// pagas. A tela de mes precisa das duas, entao o periodo vai na query.
+export const getExpenses = async (year?: number, month?: number) => {
+    const params = new URLSearchParams();
+    if (year) params.set('year', String(year));
+    if (month) params.set('month', String(month));
+
+    const query = params.toString();
+    const response = await instance.get<ExpensesResponse>(`/v1/expenses${query ? `?${query}` : ''}`);
     return response.data;
 };
 
