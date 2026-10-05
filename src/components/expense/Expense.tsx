@@ -1,9 +1,17 @@
 import { useState, useEffect } from "react";
 import { getExpenses, deleteExpense, reCreateExpense, payExpense, ExpensesResponse} from "@/services/expense";
+import { formatBRL } from "@/utils/currency";
 import ModalExpense from "./ModalExpense";
 import ModalPayExpense from "./ModalPayExpense";
 import axios from "axios";
-import { Eye, Pencil, Trash2, Wallet, X, Plus, Receipt, AlertCircle, CheckCircle } from 'lucide-react';
+import { Eye, Pencil, Trash2, Wallet, X, Plus, Receipt, AlertCircle, CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+
+function getCurrentMonth() {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+const CREDIT_CARD_LABEL = "cartão de crédito";
 
 function Expense() {
     const [expenses, setExpenses] = useState<ExpensesResponse>({
@@ -18,6 +26,7 @@ function Expense() {
     const [expenseId, setExpenseId] = useState<string>("");
     const [showRecreateModal, setShowRecreateModal] = useState<boolean>(false);
     const [paidExpenseId, setPaidExpenseId] = useState<string>("");
+    const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonth);
 
     const openPayModal = (id: string) => {
         setExpenseId(id);
@@ -31,14 +40,6 @@ function Expense() {
         setError(null);
 
         try {
-<<<<<<< Updated upstream
-            const data = await getExpenses();
-            console.log("Despesas carregadas:", data);
-            if (data && Array.isArray(data.message)) {
-                setExpenses(data);
-            } else if (data?.message && !Array.isArray(data.message)) {
-                setExpenses({ message: [data.message], statusCode: data.statusCode });
-=======
             // selectedMonth vem do input type="month" como "AAAA-MM".
             const [year, month] = parseSelectedMonth();
             const expenseData = await getExpenses(year, month);
@@ -47,7 +48,6 @@ function Expense() {
                 setExpenses(expenseData);
             } else if (expenseData?.message && !Array.isArray(expenseData.message)) {
                 setExpenses({ message: [expenseData.message], statusCode: expenseData.statusCode });
->>>>>>> Stashed changes
             } else {
                 setExpenses({ message: [], statusCode: 200 });
             }
@@ -64,8 +64,6 @@ function Expense() {
         fetchData();
     }, [selectedMonth]);
 
-<<<<<<< Updated upstream
-=======
 // O input type="month" pode ser limpo, e nesse caso selectedMonth fica "". Sem
 // periodo o backend so devolve as em aberto, entao nao ha o que filtrar.
 const parseSelectedMonth = (): [number | undefined, number | undefined] => {
@@ -99,7 +97,6 @@ const isCreditCard = (expense: ExpensesResponse['message'][number]): boolean => 
     return expense.payment_type?.toLowerCase().includes(CREDIT_CARD_LABEL) ?? false;
 };
 
->>>>>>> Stashed changes
     const handleExpense = async() => {
         await fetchData();
         closeModal();
@@ -174,7 +171,7 @@ const isCreditCard = (expense: ExpensesResponse['message'][number]): boolean => 
         openModal();
     }
 
-    const isEmpty = !error && (!Array.isArray(expenses?.message) || expenses.message.length === 0);
+    const isEmpty = !error && visibleExpenses.length === 0;
 
     return (
         <div className="space-y-6">
@@ -191,6 +188,39 @@ const isCreditCard = (expense: ExpensesResponse['message'][number]): boolean => 
                 >
                     <Plus className="w-4 h-4" />
                     Nova Despesa
+                </button>
+            </div>
+
+            {/* Month Navigator */}
+            <div className="flex items-center justify-end gap-2">
+                <button
+                    onClick={() => {
+                        const [year, month] = selectedMonth.split('-').map(Number);
+                        const prev = new Date(year, month - 2, 1);
+                        setSelectedMonth(`${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`);
+                    }}
+                    className="p-2 rounded-lg hover:bg-muted/20 transition-colors"
+                    aria-label="Mês anterior"
+                >
+                    <ChevronLeft className="w-4 h-4 text-muted" />
+                </button>
+                <input
+                    type="month"
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(e.target.value)}
+                    className="bg-card border border-border rounded-xl px-4 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                />
+                <button
+                    onClick={() => {
+                        const [year, month] = selectedMonth.split('-').map(Number);
+                        const next = new Date(year, month, 1);
+                        setSelectedMonth(`${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`);
+                    }}
+                    disabled={selectedMonth === getCurrentMonth()}
+                    className="p-2 rounded-lg hover:bg-muted/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    aria-label="Próximo mês"
+                >
+                    <ChevronRight className="w-4 h-4 text-muted" />
                 </button>
             </div>
 
@@ -222,8 +252,8 @@ const isCreditCard = (expense: ExpensesResponse['message'][number]): boolean => 
                     <div className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center mx-auto mb-4">
                         <Receipt className="w-8 h-8 text-muted" />
                     </div>
-                    <h3 className="text-lg font-medium text-foreground mb-1">Nenhuma despesa cadastrada</h3>
-                    <p className="text-sm text-muted">Comece adicionando suas despesas mensais.</p>
+                    <h3 className="text-lg font-medium text-foreground mb-1">Nenhuma despesa neste mês</h3>
+                    <p className="text-sm text-muted">Ajuste o mês ou adicione uma nova despesa.</p>
                 </div>
             )}
 
@@ -235,21 +265,32 @@ const isCreditCard = (expense: ExpensesResponse['message'][number]): boolean => 
                             <thead>
                                 <tr className="border-b border-border bg-secondary/50">
                                     <th className="text-left px-6 py-4 font-semibold text-foreground">Descrição</th>
-                                    <th className="text-left px-6 py-4 font-semibold text-foreground">Valor</th>
-                                    <th className="text-left px-6 py-4 font-semibold text-foreground">Frequência</th>
+                                    <th className="text-left px-6 py-4 font-semibold text-foreground">Tipo de Pagamento</th>
+                                    <th className="text-right px-6 py-4 font-semibold text-foreground">Valor estimado</th>
+                                    <th className="text-right px-6 py-4 font-semibold text-foreground">Valor</th>
                                     <th className="text-left px-6 py-4 font-semibold text-foreground">Vencimento</th>
+                                    <th className="text-left px-6 py-4 font-semibold text-foreground">Frequência</th>
                                     <th className="text-right px-6 py-4 font-semibold text-foreground">Ações</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border">
-                                {expenses?.message.map((expense) => (
+                                {visibleExpenses.map((expense) => (
                                     <tr key={expense.id} className="hover:bg-secondary/30 transition-colors">
                                         <td className="px-6 py-4 font-medium text-foreground">{expense.description}</td>
-                                        <td className="px-6 py-4 font-medium text-danger">
-                                            {expense.amount > 0 
-                                                ? expense.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) 
-                                                : (expense.estimated_amount ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-                                            }
+                                        <td className="px-6 py-4 text-muted">{expense.payment_type || '-'}</td>
+                                        <td className="px-6 py-4 text-right text-muted">{formatBRL(expense.estimated_amount)}</td>
+                                        <td className="px-6 py-4 text-right font-medium text-danger">{formatBRL(expense.amount)}</td>
+                                        <td className="px-6 py-4 text-muted">
+                                            <div className="flex items-center gap-2">
+                                                <span>
+                                                    {expense.due_date ? new Date(expense.due_date).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '-'}
+                                                </span>
+                                                {isExpensePaid(expense) && (
+                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success-light text-success">
+                                                        Paga
+                                                    </span>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-accent-light text-accent">
@@ -258,18 +299,17 @@ const isCreditCard = (expense: ExpensesResponse['message'][number]): boolean => 
                                                  expense.frequency}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 text-muted">
-                                            {expense.due_date ? new Date(expense.due_date).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '-'}
-                                        </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center justify-end gap-1">
-                                                <button 
-                                                    onClick={() => openPayModal(expense.id)}
-                                                    className="p-2 rounded-lg text-muted hover:text-success hover:bg-success-light transition-colors"
-                                                    title="Pagar despesa"
-                                                >
-                                                    <Wallet size={16} />
-                                                </button>
+                                                {!isCreditCard(expense) && !isExpensePaid(expense) && (
+                                                    <button 
+                                                        onClick={() => openPayModal(expense.id)}
+                                                        className="p-2 rounded-lg text-muted hover:text-success hover:bg-success-light transition-colors"
+                                                        title="Pagar despesa"
+                                                    >
+                                                        <Wallet size={16} />
+                                                    </button>
+                                                )}
                                                 <button 
                                                     onClick={() => handleView(expense.id)}
                                                     className="p-2 rounded-lg text-muted hover:text-primary hover:bg-primary-light transition-colors"
