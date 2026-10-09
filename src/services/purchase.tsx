@@ -15,7 +15,9 @@ export interface Purchase {
     payment_type: string,
     credit_card: string,
     purchase_type: string,
-    person: string
+    person: string,
+    installment_id?: string
+    installment_info?: string
 }
 
 export interface PurchaseResponse {

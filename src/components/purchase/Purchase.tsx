@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { getPurchases, deletePurchase, type Purchase } from "@/services/purchase";
 import { getPurchasesInstallments, payInstallment, type Installment } from "@/services/installment";
-import { Eye, Layers, Pencil, Trash2, X, Plus, ShoppingCart, AlertCircle, CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { formatBRL } from "@/utils/currency";
+import { Eye, Layers, Pencil, Trash2, Wallet, X, Plus, ShoppingCart, AlertCircle, CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import ModalPurchase from "./ModalPurchase";
 import ModalInstallments from "../installment/ModalInstallment";
 
@@ -35,6 +36,7 @@ function Purchase() {
     const [currentMonth, setCurrentMonth] = useState(getCurrentMonth);
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
+    const [total, setTotal] = useState(0);
 
     const openModal = () => setIsModalOpen(true);
     const closeModal = () => {
@@ -53,12 +55,15 @@ function Purchase() {
                 setPurchases(msg.responses);
                 setPage(msg.page);
                 setTotalPages(msg.total_pages);
+                setTotal(msg.total ?? 0);
             } else if (msg && Array.isArray(msg)) {
                 setPurchases(msg);
                 setPage(1);
                 setTotalPages(1);
+                setTotal(msg.reduce((sum, purchase) => sum + (purchase.amount ?? 0), 0));
             } else {
                 setPurchases([]);
+                setTotal(0);
             }
         } catch (err) {
             if (err instanceof Error) {
@@ -163,29 +168,35 @@ function Purchase() {
                 </button>
             </div>
 
-            {/* Month Navigator */}
-            <div className="flex items-center justify-end gap-2">
-                <button
-                    onClick={() => navigateMonth(-1)}
-                    className="p-2 rounded-lg hover:bg-muted/20 transition-colors"
-                    aria-label="Mês anterior"
-                >
-                    <ChevronLeft className="w-4 h-4 text-muted" />
-                </button>
-                <input
-                    type="month"
-                    value={currentMonth}
-                    onChange={(e) => setCurrentMonth(e.target.value)}
-                    className="bg-card border border-border rounded-xl px-4 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                />
-                <button
-                    onClick={() => navigateMonth(1)}
-                    disabled={currentMonth === getCurrentMonth()}
-                    className="p-2 rounded-lg hover:bg-muted/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                    aria-label="Próximo mês"
-                >
-                    <ChevronRight className="w-4 h-4 text-muted" />
-                </button>
+            {/* Month Navigator + Total */}
+            <div className="flex items-center justify-between gap-2">
+                <div className="bg-card border border-border rounded-xl px-4 py-2">
+                    <p className="text-xs text-muted">Total do mês</p>
+                    <p className="text-lg font-semibold text-foreground">{formatBRL(total)}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => navigateMonth(-1)}
+                        className="p-2 rounded-lg hover:bg-muted/20 transition-colors"
+                        aria-label="Mês anterior"
+                    >
+                        <ChevronLeft className="w-4 h-4 text-muted" />
+                    </button>
+                    <input
+                        type="month"
+                        value={currentMonth}
+                        onChange={(e) => setCurrentMonth(e.target.value)}
+                        className="bg-card border border-border rounded-xl px-4 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    />
+                    <button
+                        onClick={() => navigateMonth(1)}
+                        disabled={currentMonth === getCurrentMonth()}
+                        className="p-2 rounded-lg hover:bg-muted/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                        aria-label="Próximo mês"
+                    >
+                        <ChevronRight className="w-4 h-4 text-muted" />
+                    </button>
+                </div>
             </div>
 
             {/* Success Alert */}
@@ -253,9 +264,13 @@ function Purchase() {
                                             {message.date ? new Date(message.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '-'}
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-accent-light text-accent">
-                                                {message.installment_number}x
-                                            </span>
+                                            {message.installment_info ? (
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-accent-light text-accent">
+                                                    {message.installment_info}
+                                                </span>
+                                            ) : (
+                                                <span className="text-xs text-muted">À vista</span>
+                                            )}
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center justify-end gap-1">
@@ -278,6 +293,15 @@ function Purchase() {
                                                 >
                                                     <Layers size={16} />
                                                 </button>
+                                                {message.payment_type?.toLowerCase().includes("financiamento") && message.installment_id && !message.paid && (
+                                                    <button 
+                                                        onClick={() => handlePayInstallment(message.installment_id!)}
+                                                        className="p-2 rounded-lg text-muted hover:text-success hover:bg-success-light transition-colors"
+                                                        title="Pagar parcela"
+                                                    >
+                                                        <Wallet size={16} />
+                                                    </button>
+                                                )}
                                                 <button 
                                                     onClick={() => {
                                                         setPurchaseId(message.id);

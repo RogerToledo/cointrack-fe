@@ -156,18 +156,19 @@ const ModalPurchaseType: React.FC<ModalProps> = ({ isOpen, onClose, onPurchaseAc
             [name]: name === 'installment_number' ? Number(value) : value
             };
 
-            if (name === "payment_type") {
-                const selected = paymentTypes.find(pt => pt.id === value);
-                const isCard = selected?.name.toLowerCase().includes("cartão de crédito");
+                if (name === "payment_type") {
+                    const selected = paymentTypes.find(pt => pt.id === value);
+                    const isCard = selected?.name.toLowerCase().includes("cartão de crédito");
+                    const isFinancing = selected?.name.toLowerCase().includes("financiamento");
 
-                if (!isCard) {
-                    newData.credit_card = "";
-                }
+                    if (!isCard) {
+                        newData.credit_card = "";
+                    }
 
-                if (selected?.spot_payment === 0) {
-                    newData.installment_number = 0;
+                    if (selected?.spot_payment === 0 && !isFinancing) {
+                        newData.installment_number = 0;
+                    }
                 }
-            }
             console.log("DEBUG - Form data updated:", newData);
             return newData;
         });
@@ -244,6 +245,8 @@ const ModalPurchaseType: React.FC<ModalProps> = ({ isOpen, onClose, onPurchaseAc
 
     const isSpotPaymentSelected = () => {
         const selectedType = (paymentTypes ?? []).find(pt => pt.id === formData.payment_type);
+        const isFinancing = selectedType?.name?.toLowerCase().includes("financiamento");
+        if (isFinancing) return false;
         return selectedType?.spot_payment === 0;
     }
 
