@@ -29,6 +29,20 @@ export interface InvoiceResponse {
     message: Invoice;
 }
 
+export type InvoiceStatus = "Aberta" | "Pagar" | "Pago";
+
+export interface InvoiceStatusResponse {
+    statusCode: number;
+    message: { status: InvoiceStatus };
+}
+
+export const getInvoiceStatus = async (creditCardId: string, year: number, month: number) => {
+    const response = await instance.get<InvoiceStatusResponse>(
+        `/v1/creditCards/${creditCardId}/invoice?year=${year}&month=${month}`
+    );
+    return response.data;
+};
+
 export const getInvoice = async (yearMonth: string, creditCardId?: string) => {
     let url = `/v1/invoices?month=${yearMonth}`;
     if (creditCardId) {

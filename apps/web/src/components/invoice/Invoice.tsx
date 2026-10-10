@@ -1,7 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
-import { getInvoice, payInvoice, InvoicePurchase } from "@/services/invoice";
+import { getInvoice, payInvoice, getInvoiceStatus, InvoicePurchase, InvoiceStatus } from "@/services/invoice";
 import { getCreditCards, CreditCard } from "@/services/creditCard";
 import { FileText, ChevronLeft, ChevronRight, AlertCircle, CheckCircle, X, Lock } from "lucide-react";
+
+function mapInvoiceStatus(status: InvoiceStatus): "open" | "closed" | "paid" {
+    if (status === "Pago") return "paid";
+    if (status === "Pagar") return "closed";
+    return "open";
+}
 
 function Invoice() {
     const [purchases, setPurchases] = useState<InvoicePurchase[]>([]);
@@ -57,6 +63,17 @@ function Invoice() {
             } else {
                 setPurchases([]);
                 setInvoiceStatus("open");
+            }
+
+            // Status oficial do backend, quando há um cartão específico selecionado
+            if (selectedCardId) {
+                try {
+                    const [year, month] = currentMonth.split("-").map(Number);
+                    const statusData = await getInvoiceStatus(selectedCardId, year, month);
+                    setInvoiceStatus(mapInvoiceStatus(statusData.message.status));
+                } catch {
+                    // mantém o status derivado das compras
+                }
             }
         } catch (err) {
             if (err instanceof Error) {
