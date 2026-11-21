@@ -293,14 +293,26 @@ function Purchase() {
                                                 >
                                                     <Layers size={16} />
                                                 </button>
-                                                {message.payment_type?.toLowerCase().includes("financiamento") && message.installment_id && !message.paid && (
-                                                    <button 
-                                                        onClick={() => handlePayInstallment(message.installment_id!)}
-                                                        className="p-2 rounded-lg text-muted hover:text-success hover:bg-success-light transition-colors"
-                                                        title="Pagar parcela"
-                                                    >
-                                                        <Wallet size={16} />
-                                                    </button>
+                                                {message.payment_type?.toLowerCase().includes("financiamento") && message.installment_id && (
+                                                    <>
+                                                        {message.paid && (
+                                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success-light text-success">
+                                                                Pago
+                                                            </span>
+                                                        )}
+                                                        <button
+                                                            onClick={() => handlePayInstallment(message.installment_id!)}
+                                                            disabled={message.paid}
+                                                            className={`p-2 rounded-lg transition-colors ${
+                                                                message.paid
+                                                                    ? "text-muted-light cursor-not-allowed opacity-40"
+                                                                    : "text-muted hover:text-success hover:bg-success-light"
+                                                            }`}
+                                                            title={message.paid ? "Financiamento pago" : "Pagar parcela"}
+                                                        >
+                                                            <Wallet size={16} />
+                                                        </button>
+                                                    </>
                                                 )}
                                                 <button 
                                                     onClick={() => {

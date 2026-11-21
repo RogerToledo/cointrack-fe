@@ -6,7 +6,7 @@ import { useFamily } from '@/contexts/FamilyContext';
 import { 
     User, LogOut, ChevronDown, ChevronLeft, Users, 
     LayoutDashboard, ShoppingCart, CreditCard, Wallet,
-    Tag, DollarSign, Receipt, Menu, UserCircle
+    Tag, DollarSign, Receipt, Menu, UserCircle, TrendingUp
 } from 'lucide-react';
 
 interface NavBarProps {
@@ -106,6 +106,11 @@ function NavBar({ sidebarOpen, setSidebarOpen }: NavBarProps) {
                     <Link href="/earning" className={navLinkClasses('/earning')}>
                         <DollarSign className="w-5 h-5 flex-shrink-0" />
                         {sidebarOpen && <span>Ganhos</span>}
+                    </Link>
+
+                    <Link href="/investment" className={navLinkClasses('/investment')}>
+                        <TrendingUp className="w-5 h-5 flex-shrink-0" />
+                        {sidebarOpen && <span>Investimentos</span>}
                     </Link>
 
                     <Link href="/invoice" className={navLinkClasses('/invoice')}>
