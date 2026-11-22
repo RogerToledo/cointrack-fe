@@ -15,6 +15,7 @@ import { FormInput } from '../../components/FormInput';
 import { validateForgotPasswordForm, type FieldErrors } from '../../utils/validation';
 import { extractErrorMessage } from '../../utils/errorMessage';
 import { authService } from '../../services/api';
+import { theme } from '../../constants/theme';
 
 export default function ForgotPasswordScreen() {
     const router = useRouter();
@@ -121,7 +122,7 @@ export default function ForgotPasswordScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F9FAFB',
+        backgroundColor: theme.colors.background,
     },
     scrollContent: {
         flexGrow: 1,
@@ -134,42 +135,42 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 24,
         fontWeight: '700',
-        color: '#333',
+        color: theme.colors.primaryDark,
         marginBottom: 8,
         textAlign: 'center',
     },
     subtitle: {
         fontSize: 14,
-        color: '#666',
+        color: theme.colors.muted,
         marginBottom: 24,
         textAlign: 'center',
         lineHeight: 20,
     },
     successContainer: {
-        backgroundColor: '#E8F5E9',
-        borderRadius: 8,
+        backgroundColor: theme.colors.successLight,
+        borderRadius: theme.radius.md,
         padding: 12,
         marginBottom: 16,
     },
     successText: {
-        color: '#2E7D32',
+        color: theme.colors.successHover,
         fontSize: 14,
         textAlign: 'center',
     },
     errorContainer: {
-        backgroundColor: '#FFEBEE',
-        borderRadius: 8,
+        backgroundColor: theme.colors.dangerLight,
+        borderRadius: theme.radius.md,
         padding: 12,
         marginBottom: 16,
     },
     errorText: {
-        color: '#C62828',
+        color: theme.colors.danger,
         fontSize: 14,
         textAlign: 'center',
     },
     submitButton: {
-        backgroundColor: '#1976D2',
-        borderRadius: 8,
+        backgroundColor: theme.colors.primary,
+        borderRadius: theme.radius.md,
         paddingVertical: 14,
         alignItems: 'center',
         marginTop: 8,
@@ -178,7 +179,7 @@ const styles = StyleSheet.create({
         opacity: 0.6,
     },
     submitButtonText: {
-        color: '#FFF',
+        color: theme.colors.surface,
         fontSize: 16,
         fontWeight: '600',
     },
@@ -187,8 +188,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     backLinkText: {
-        color: '#1976D2',
+        color: theme.colors.accent,
         fontSize: 14,
-        fontWeight: '500',
+        fontWeight: '600',
     },
 });

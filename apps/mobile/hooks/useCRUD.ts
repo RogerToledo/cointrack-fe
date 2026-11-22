@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { extractErrorMessage } from '@cointrack/utils';
 
 import { useToast } from '../contexts/ToastContext';
-import { extractErrorMessage } from '../utils/errorMessage';
 
 interface CRUDState<T> {
   data: T[];
@@ -42,13 +42,11 @@ interface UseCRUDOptions<T> {
 }
 
 function isPaginated<T>(data: unknown): data is PaginatedResponse<T> {
-  return (
-    typeof data === 'object' &&
-    data !== null &&
-    'message' in data &&
-    typeof (data as any).message === 'object' &&
-    'responses' in (data as any).message
-  );
+  if (typeof data !== 'object' || data === null || !('message' in data)) {
+    return false;
+  }
+  const msg = (data as { message: unknown }).message;
+  return typeof msg === 'object' && msg !== null && 'responses' in msg;
 }
 
 export function useCRUD<T extends { id: string }>(
@@ -65,6 +63,12 @@ export function useCRUD<T extends { id: string }>(
   const limit = options.limit ?? 20;
   const paginated = options.paginated ?? false;
 
+  const fetchFnRef = useRef(options.fetchFn);
+  fetchFnRef.current = options.fetchFn;
+
+  const deleteFnRef = useRef(options.deleteFn);
+  deleteFnRef.current = options.deleteFn;
+
   const fetchData = useCallback(
     async (targetPage: number, isRefresh = false) => {
       if (isRefresh) setRefreshing(true);
@@ -72,7 +76,7 @@ export function useCRUD<T extends { id: string }>(
       setError(null);
 
       try {
-        const response = await options.fetchFn(targetPage, limit);
+        const response = await fetchFnRef.current(targetPage, limit);
         if (paginated && isPaginated<T>(response)) {
           const msg = response.message;
           setData(msg.responses);
@@ -80,10 +84,11 @@ export function useCRUD<T extends { id: string }>(
           setTotalPages(msg.total_pages);
           setTotal(msg.total);
         } else {
-          setData(response.message as T[]);
+          const list = Array.isArray(response.message) ? (response.message as T[]) : [];
+          setData(list);
           setPage(1);
           setTotalPages(1);
-          setTotal((response.message as T[]).length);
+          setTotal(list.length);
         }
       } catch (err) {
         setError(extractErrorMessage(err, 'Erro ao carregar dados'));
@@ -92,15 +97,14 @@ export function useCRUD<T extends { id: string }>(
         setRefreshing(false);
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [options.fetchFn, limit, paginated],
+    [limit, paginated],
   );
 
   useEffect(() => {
     setPage(1);
     fetchData(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, options.deps ?? []);
+  }, [fetchData, ...(options.deps ?? [])]);
 
   const refresh = useCallback(() => fetchData(page, true), [fetchData, page]);
 
@@ -120,7 +124,7 @@ export function useCRUD<T extends { id: string }>(
   const remove = useCallback(
     async (id: string): Promise<boolean> => {
       try {
-        await options.deleteFn(id);
+        await deleteFnRef.current(id);
         setData((prev) => prev.filter((item) => item.id !== id));
         toast.show('Item removido com sucesso', 'success');
         return true;
@@ -129,8 +133,7 @@ export function useCRUD<T extends { id: string }>(
         return false;
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [options.deleteFn, toast],
+    [toast],
   );
 
   return { data, loading, error, refreshing, page, totalPages, total, refresh, remove, goToPage, nextPage, prevPage };

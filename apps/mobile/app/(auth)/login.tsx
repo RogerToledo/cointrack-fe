@@ -11,11 +11,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { decodeJwtPayload, extractErrorMessage } from '@cointrack/utils';
 import { FormInput } from '../../components/FormInput';
 import { validateLoginForm, type FieldErrors } from '../../utils/validation';
-import { extractErrorMessage } from '../../utils/errorMessage';
 import { authService } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
+import { theme } from '../../constants/theme';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -51,23 +52,13 @@ export default function LoginScreen() {
             if (!token || typeof token !== 'string') {
                 throw new Error('Token não recebido do servidor');
             }
-            console.log('[LOGIN] 3. Token received, length:', token.length);
 
-            // Decode JWT to extract user data
-            const tokenParts = token.split('.');
-            if (tokenParts.length !== 3) {
-                throw new Error('Formato de token inválido');
-            }
-
-            console.log('[LOGIN] 4. Decoding JWT payload...');
-            const payload = JSON.parse(atob(tokenParts[1]));
-            console.log('[LOGIN] 5. Payload decoded:', JSON.stringify(payload).substring(0, 100));
+            const payload = decodeJwtPayload(token);
             const userData = {
                 id: payload.user_id || payload.sub || '',
                 name: payload.name || email.split('@')[0],
                 email: payload.email || email.trim(),
             };
-            console.log('[LOGIN] 6. userData:', JSON.stringify(userData));
 
             await login(token, userData);
             router.replace('/');
@@ -169,7 +160,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
     flex: {
         flex: 1,
-        backgroundColor: '#F9FAFB',
+        backgroundColor: theme.colors.background,
     },
     scrollContent: {
         flexGrow: 1,
@@ -182,29 +173,29 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 24,
         fontWeight: '700',
-        color: '#1F2937',
+        color: theme.colors.primaryDark,
         marginBottom: 8,
     },
     subtitle: {
         fontSize: 14,
-        color: '#6B7280',
+        color: theme.colors.muted,
         marginBottom: 24,
     },
     errorBanner: {
-        backgroundColor: '#FEE2E2',
+        backgroundColor: theme.colors.dangerLight,
         borderWidth: 1,
         borderColor: '#FECACA',
-        borderRadius: 12,
+        borderRadius: theme.radius.md,
         padding: 12,
         marginBottom: 16,
     },
     errorBannerText: {
         fontSize: 14,
-        color: '#DC2626',
+        color: theme.colors.danger,
     },
     submitButton: {
-        backgroundColor: '#4F46E5',
-        borderRadius: 12,
+        backgroundColor: theme.colors.primary,
+        borderRadius: theme.radius.md,
         paddingVertical: 14,
         alignItems: 'center',
         justifyContent: 'center',
@@ -216,7 +207,7 @@ const styles = StyleSheet.create({
     submitButtonText: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#FFF',
+        color: theme.colors.surface,
     },
     link: {
         alignSelf: 'center',
@@ -224,8 +215,8 @@ const styles = StyleSheet.create({
     },
     linkText: {
         fontSize: 14,
-        color: '#4F46E5',
-        fontWeight: '500',
+        color: theme.colors.accent,
+        fontWeight: '600',
     },
     registerRow: {
         flexDirection: 'row',
@@ -235,11 +226,11 @@ const styles = StyleSheet.create({
     },
     registerLabel: {
         fontSize: 14,
-        color: '#6B7280',
+        color: theme.colors.muted,
     },
     registerLink: {
         fontSize: 14,
-        color: '#4F46E5',
+        color: theme.colors.accent,
         fontWeight: '600',
     },
 });

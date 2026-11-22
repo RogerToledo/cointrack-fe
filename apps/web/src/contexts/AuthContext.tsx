@@ -50,10 +50,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (token && userData && userData !== 'undefined' && userData !== 'null') {
       // Verificar se o token expirou
       if (isTokenExpired()) {
-        console.log('Token expirado. Fazendo logout...');
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         localStorage.removeItem('tokenExpiration');
+        localStorage.removeItem('selectedFamilyId');
         setIsLoading(false);
         return;
       }
@@ -83,6 +83,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       localStorage.removeItem('tokenExpiration');
+      localStorage.removeItem('selectedFamilyId');
     }
     setUser(null);
     router.replace('/login');
@@ -94,7 +95,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const interval = setInterval(() => {
       if (isTokenExpired()) {
-        console.log('Token expirado. Fazendo logout automático...');
         logout();
       }
     }, 60000); // Verificar a cada 1 minuto

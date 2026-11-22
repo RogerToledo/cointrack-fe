@@ -1,397 +1,494 @@
-import { useState, useEffect } from "react";
-import { getExpenses, deleteExpense, reCreateExpense, payExpense, ExpensesResponse} from "@/services/expense";
-import { formatBRL } from "@/utils/currency";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import {
+  getExpenses,
+  deleteExpense,
+  reCreateExpense,
+  payExpense,
+  ExpensesResponse,
+} from "@/services/expense";
+import {
+  formatBRL,
+  formatDateBR,
+  getCurrentMonth,
+  parseYearMonth,
+  extractErrorMessage,
+} from "@cointrack/utils";
+import { useToast } from "@/contexts/ToastContext";
 import ModalExpense from "./ModalExpense";
 import ModalPayExpense from "./ModalPayExpense";
-import axios from "axios";
-import { Eye, Pencil, Trash2, Wallet, X, Plus, Receipt, AlertCircle, CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react';
-
-function getCurrentMonth() {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-}
+import {
+  Eye,
+  Pencil,
+  Trash2,
+  Wallet,
+  Plus,
+  Receipt,
+  CheckCircle2,
+  Clock,
+} from "lucide-react";
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  ConfirmDialog,
+  EmptyState,
+  IconButton,
+  MonthNavigator,
+  PageHeader,
+  TableSkeleton,
+} from "@/components/ui";
 
 const CREDIT_CARD_LABEL = "cartão de crédito";
 
+type StatusFilter = "all" | "pending" | "paid";
+
 function Expense() {
-    const [expenses, setExpenses] = useState<ExpensesResponse>({
-        message: [],
-        statusCode: 0
-    });
-    const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-    const [isPayModalOpen, setIsPayModalOpen] = useState<boolean>(false);
-    const [error, setError] = useState<string | null>(null);
-    const [success, setSuccess] = useState<string | null>(null);
-    const [isUpdate, setIsUpdate] = useState<boolean>(false);
-    const [expenseId, setExpenseId] = useState<string>("");
-    const [showRecreateModal, setShowRecreateModal] = useState<boolean>(false);
-    const [paidExpenseId, setPaidExpenseId] = useState<string>("");
-    const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonth);
+  const toast = useToast();
+  const [expenses, setExpenses] = useState<ExpensesResponse>({
+    message: [],
+    statusCode: 0,
+  });
+  const [loading, setLoading] = useState<boolean>(true);
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [isPayModalOpen, setIsPayModalOpen] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isUpdate, setIsUpdate] = useState<boolean>(false);
+  const [expenseId, setExpenseId] = useState<string>("");
+  const [showRecreateModal, setShowRecreateModal] = useState<boolean>(false);
+  const [isRecreating, setIsRecreating] = useState<boolean>(false);
+  const [paidExpenseId, setPaidExpenseId] = useState<string>("");
+  const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonth);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
 
-    const openPayModal = (id: string) => {
-        setExpenseId(id);
-        setIsPayModalOpen(true);
-    };
+  const openPayModal = (id: string) => {
+    setExpenseId(id);
+    setIsPayModalOpen(true);
+  };
 
-    const openModal = () => setIsModalOpen(true);
-    const closeModal = () => setIsModalOpen(false);
+  const openModal = () => setIsModalOpen(true);
+  const closeModal = () => setIsModalOpen(false);
 
-    const fetchData = async () => {
-        setError(null);
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
 
-        try {
-            // selectedMonth vem do input type="month" como "AAAA-MM".
-            const [year, month] = parseSelectedMonth();
-            const expenseData = await getExpenses(year, month);
+    try {
+      const [year, month] = parseYearMonth(selectedMonth);
+      const expenseData = await getExpenses(year, month);
 
-            if (expenseData && Array.isArray(expenseData.message)) {
-                setExpenses(expenseData);
-            } else if (expenseData?.message && !Array.isArray(expenseData.message)) {
-                setExpenses({ message: [expenseData.message], statusCode: expenseData.statusCode });
-            } else {
-                setExpenses({ message: [], statusCode: 200 });
-            }
-        } catch (err) {
-            if (err instanceof Error) {
-                setError(err.message);
-            } else {
-                setError("An unknown error occurred");
-            }
-        }
-    };
+      if (expenseData && Array.isArray(expenseData.message)) {
+        setExpenses(expenseData);
+      } else if (expenseData?.message && !Array.isArray(expenseData.message)) {
+        setExpenses({ message: [expenseData.message], statusCode: expenseData.statusCode });
+      } else {
+        setExpenses({ message: [], statusCode: 200 });
+      }
+    } catch (err) {
+      setError(extractErrorMessage(err, "Erro ao carregar despesas."));
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedMonth]);
 
-    useEffect(() => {
-        fetchData();
-    }, [selectedMonth]);
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
-// O input type="month" pode ser limpo, e nesse caso selectedMonth fica "". Sem
-// periodo o backend so devolve as em aberto, entao nao ha o que filtrar.
-const parseSelectedMonth = (): [number | undefined, number | undefined] => {
-    const [year, month] = selectedMonth.split('-').map(Number);
-    if (!year || !month) return [undefined, undefined];
-    return [year, month];
-};
-
-// Linhas antigas podem ter `paid: false` com `payment_date` preenchida: o
-// backend vazava a data da recorrencia anterior na seguinte, e isso ja foi
-// corrigido em PrepareNextOccurrence. O fallback abaixo mantem a tag correta
-// nas linhas ja gravadas, que nao vao se corrigir sozinhas.
-const isExpensePaid = (expense: ExpensesResponse['message'][number]): boolean => {
+  const isExpensePaid = (expense: ExpensesResponse["message"][number]): boolean => {
     return Boolean(expense.paid) || Boolean(expense.payment_date);
-};
+  };
 
-// O backend ja devolve so o mes pedido, pagas inclusive. Este filtro continua
-// como rede de seguranca: enquanto a request do mes novo nao volta, a tela
-// mostra o estado antigo, e sem isto apareceria despesa do mes errado.
-const visibleExpenses = (Array.isArray(expenses?.message) ? expenses.message : []).filter((expense) => {
-    const [year, month] = parseSelectedMonth();
-    if (year === undefined || month === undefined) return true;
-    if (!expense.due_date) return false;
-
-    const due = new Date(expense.due_date);
-
-    return due.getUTCFullYear() === year && due.getUTCMonth() + 1 === month;
-});
-
-const isCreditCard = (expense: ExpensesResponse['message'][number]): boolean => {
+  const isCreditCard = (expense: ExpensesResponse["message"][number]): boolean => {
     return expense.payment_type?.toLowerCase().includes(CREDIT_CARD_LABEL) ?? false;
-};
+  };
 
-    const handleExpense = async() => {
-        await fetchData();
-        closeModal();
+  const visibleExpenses = useMemo(() => {
+    const [year, month] = parseYearMonth(selectedMonth);
+    const list = Array.isArray(expenses?.message) ? expenses.message : [];
+
+    return list.filter((expense) => {
+      if (year !== undefined && month !== undefined) {
+        if (!expense.due_date) return false;
+        const due = new Date(expense.due_date);
+        if (due.getUTCFullYear() !== year || due.getUTCMonth() + 1 !== month) {
+          return false;
+        }
+      }
+      if (statusFilter === "paid") return isExpensePaid(expense);
+      if (statusFilter === "pending") return !isExpensePaid(expense);
+      return true;
+    });
+  }, [expenses, selectedMonth, statusFilter]);
+
+  const summary = useMemo(() => {
+    const [year, month] = parseYearMonth(selectedMonth);
+    const monthExpenses = (Array.isArray(expenses?.message) ? expenses.message : []).filter(
+      (expense) => {
+        if (year === undefined || month === undefined) return true;
+        if (!expense.due_date) return false;
+        const due = new Date(expense.due_date);
+        return due.getUTCFullYear() === year && due.getUTCMonth() + 1 === month;
+      }
+    );
+
+    let totalEstimated = 0;
+    let totalPaid = 0;
+    let pendingCount = 0;
+
+    for (const item of monthExpenses) {
+      totalEstimated += item.estimated_amount || item.amount || 0;
+      if (isExpensePaid(item)) {
+        totalPaid += item.amount || 0;
+      } else {
+        pendingCount += 1;
+      }
     }
 
-    const handlePay = async (id: string, amount: number, date: string) => {
-        try {
-            await payExpense(id, amount, date);
-            setIsPayModalOpen(false);
-            fetchData();
-            setPaidExpenseId(id);
-            setShowRecreateModal(true);
-        } catch (err) {
-            throw err;
-        }
-    };
+    return { totalEstimated, totalPaid, pendingCount };
+  }, [expenses, selectedMonth]);
 
-    const handleRecreateConfirm = async () => {
-        try {
-            await reCreateExpense(paidExpenseId);
-            await fetchData();
-            setSuccess("Despesa paga e recorrente recriada com sucesso!");
-            setTimeout(() => setSuccess(null), 3000);
-        } catch (err) {
-            if (axios.isAxiosError(err)) {
-                const apiMessage = err.response?.data?.message;
-                setError(apiMessage || "Despesa paga, mas erro ao recriar recorrência.");
-            } else {
-                setError("Despesa paga, mas erro ao recriar recorrência.");
-            }
-        } finally {
-            setShowRecreateModal(false);
-            setPaidExpenseId("");
-        }
-    };
+  const handleExpense = async () => {
+    await fetchData();
+    closeModal();
+  };
 
-    const handleRecreateDecline = () => {
-        setShowRecreateModal(false);
-        setPaidExpenseId("");
-        setSuccess("Pagamento registrado com sucesso!");
-        setTimeout(() => setSuccess(null), 3000);
-    };
+  const handlePay = async (id: string, amount: number, date: string) => {
+    await payExpense(id, amount, date);
+    setIsPayModalOpen(false);
+    await fetchData();
+    setPaidExpenseId(id);
+    setShowRecreateModal(true);
+  };
 
-    const handleDelete = async (id: string) => {
-        if (!window.confirm('Tem certeza que deseja deletar esta despesa?')) {
-            return;
-        }
-        
-        try {
-            await deleteExpense(id)
-            await fetchData();
-        } catch (err) {
-            console.error(err);
-            if (axios.isAxiosError(err)) {
-                const apiMessage = err.response?.data?.message;
-                setError(apiMessage || "Ocorreu um erro inesperado.");
-            } else {
-                setError("Ocorreu um erro inesperado.");
-            }
-        };
-    } 
-
-    const handleView = (id: string) => {
-        setExpenseId(id);
-        setIsUpdate(false);
-        openModal();
+  const handleRecreateConfirm = async () => {
+    setIsRecreating(true);
+    try {
+      await reCreateExpense(paidExpenseId);
+      await fetchData();
+      toast.success("Despesa paga e recorrente recriada com sucesso!");
+    } catch (err) {
+      toast.error(
+        extractErrorMessage(err, "Despesa paga, mas erro ao recriar recorrência.")
+      );
+    } finally {
+      setIsRecreating(false);
+      setShowRecreateModal(false);
+      setPaidExpenseId("");
     }
+  };
 
-    const handleOpenNew = () => {
-        setExpenseId("");
-        setIsUpdate(false);
-        openModal();
+  const handleRecreateDecline = () => {
+    setShowRecreateModal(false);
+    setPaidExpenseId("");
+    toast.success("Pagamento registrado com sucesso!");
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTargetId) return;
+    setIsDeleting(true);
+    try {
+      await deleteExpense(deleteTargetId);
+      setDeleteTargetId(null);
+      toast.success("Despesa excluída com sucesso.");
+      await fetchData();
+    } catch (err) {
+      toast.error(extractErrorMessage(err, "Erro ao deletar despesa."));
+    } finally {
+      setIsDeleting(false);
     }
+  };
 
-    const isEmpty = !error && visibleExpenses.length === 0;
+  const handleView = (id: string) => {
+    setExpenseId(id);
+    setIsUpdate(false);
+    openModal();
+  };
 
-    return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold text-foreground">Despesas</h1>
-                    <p className="text-muted mt-1">Gerencie suas despesas fixas e variáveis</p>
-                </div>
-                <button 
-                    type="button" 
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary-hover focus:ring-4 focus:ring-primary/20 transition-all"
-                    onClick={handleOpenNew}
-                >
-                    <Plus className="w-4 h-4" />
-                    Nova Despesa
-                </button>
-            </div>
+  const handleOpenNew = () => {
+    setExpenseId("");
+    setIsUpdate(false);
+    openModal();
+  };
 
-            {/* Month Navigator */}
-            <div className="flex items-center justify-end gap-2">
-                <button
-                    onClick={() => {
-                        const [year, month] = selectedMonth.split('-').map(Number);
-                        const prev = new Date(year, month - 2, 1);
-                        setSelectedMonth(`${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`);
-                    }}
-                    className="p-2 rounded-lg hover:bg-muted/20 transition-colors"
-                    aria-label="Mês anterior"
-                >
-                    <ChevronLeft className="w-4 h-4 text-muted" />
-                </button>
-                <input
-                    type="month"
-                    value={selectedMonth}
-                    onChange={(e) => setSelectedMonth(e.target.value)}
-                    className="bg-card border border-border rounded-xl px-4 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                />
-                <button
-                    onClick={() => {
-                        const [year, month] = selectedMonth.split('-').map(Number);
-                        const next = new Date(year, month, 1);
-                        setSelectedMonth(`${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`);
-                    }}
-                    disabled={selectedMonth === getCurrentMonth()}
-                    className="p-2 rounded-lg hover:bg-muted/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                    aria-label="Próximo mês"
-                >
-                    <ChevronRight className="w-4 h-4 text-muted" />
-                </button>
-            </div>
+  const isEmpty = !loading && !error && visibleExpenses.length === 0;
 
-            {/* Success Alert */}
-            {success && (
-                <div className="flex items-center gap-3 p-4 rounded-xl bg-success-light border border-success/20" role="alert">
-                    <CheckCircle className="w-5 h-5 text-success flex-shrink-0" />
-                    <p className="text-sm text-success flex-1">{success}</p>
-                    <button onClick={() => setSuccess(null)} className="text-success hover:text-success/70 transition-colors">
-                        <X className="w-4 h-4" />
-                    </button>
-                </div>
-            )}
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Despesas"
+        subtitle="Gerencie suas despesas fixas, variáveis e recorrências"
+        actions={
+          <Button icon={<Plus className="w-4 h-4" />} onClick={handleOpenNew}>
+            Nova Despesa
+          </Button>
+        }
+      />
 
-            {/* Error Alert */}
-            {error && (
-                <div className="flex items-center gap-3 p-4 rounded-xl bg-danger-light border border-danger/20" role="alert">
-                    <AlertCircle className="w-5 h-5 text-danger flex-shrink-0" />
-                    <p className="text-sm text-danger flex-1">{error}</p>
-                    <button onClick={() => setError(null)} className="text-danger hover:text-danger/70 transition-colors">
-                        <X className="w-4 h-4" />
-                    </button>
-                </div>
-            )}
+      {/* Summary KPIs */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card padding="sm" className="flex items-center gap-3.5">
+          <div className="w-10 h-10 rounded-xl bg-primary-light flex items-center justify-center flex-shrink-0">
+            <Receipt className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <p className="text-xs font-medium text-muted">Previsto no mês</p>
+            <p className="text-lg font-bold text-foreground tabular-nums">
+              {formatBRL(summary.totalEstimated)}
+            </p>
+          </div>
+        </Card>
 
-            {/* Empty State */}
-            {isEmpty && (
-                <div className="bg-card rounded-2xl border border-border p-12 text-center">
-                    <div className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center mx-auto mb-4">
-                        <Receipt className="w-8 h-8 text-muted" />
-                    </div>
-                    <h3 className="text-lg font-medium text-foreground mb-1">Nenhuma despesa neste mês</h3>
-                    <p className="text-sm text-muted">Ajuste o mês ou adicione uma nova despesa.</p>
-                </div>
-            )}
+        <Card padding="sm" className="flex items-center gap-3.5">
+          <div className="w-10 h-10 rounded-xl bg-success-light flex items-center justify-center flex-shrink-0">
+            <CheckCircle2 className="w-5 h-5 text-success" />
+          </div>
+          <div>
+            <p className="text-xs font-medium text-muted">Total pago</p>
+            <p className="text-lg font-bold text-success tabular-nums">
+              {formatBRL(summary.totalPaid)}
+            </p>
+          </div>
+        </Card>
 
-            {/* Table */}
-            {!isEmpty && (
-                <div className="bg-card rounded-2xl border border-border overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="border-b border-border bg-secondary/50">
-                                    <th className="text-left px-6 py-4 font-semibold text-foreground">Descrição</th>
-                                    <th className="text-left px-6 py-4 font-semibold text-foreground">Tipo de Pagamento</th>
-                                    <th className="text-right px-6 py-4 font-semibold text-foreground">Valor estimado</th>
-                                    <th className="text-right px-6 py-4 font-semibold text-foreground">Valor</th>
-                                    <th className="text-left px-6 py-4 font-semibold text-foreground">Vencimento</th>
-                                    <th className="text-left px-6 py-4 font-semibold text-foreground">Frequência</th>
-                                    <th className="text-right px-6 py-4 font-semibold text-foreground">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-border">
-                                {visibleExpenses.map((expense) => (
-                                    <tr key={expense.id} className="hover:bg-secondary/30 transition-colors">
-                                        <td className="px-6 py-4 font-medium text-foreground">{expense.description}</td>
-                                        <td className="px-6 py-4 text-muted">{expense.payment_type || '-'}</td>
-                                        <td className="px-6 py-4 text-right text-muted">{formatBRL(expense.estimated_amount)}</td>
-                                        <td className="px-6 py-4 text-right font-medium text-danger">{formatBRL(expense.amount)}</td>
-                                        <td className="px-6 py-4 text-muted">
-                                            <div className="flex items-center gap-2">
-                                                <span>
-                                                    {expense.due_date ? new Date(expense.due_date).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '-'}
-                                                </span>
-                                                {isExpensePaid(expense) && (
-                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success-light text-success">
-                                                        Paga
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-accent-light text-accent">
-                                                {expense.frequency === 'monthly' ? 'Mensal' :
-                                                 expense.frequency === 'yearly' ? 'Anual' :
-                                                 expense.frequency}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center justify-end gap-1">
-                                                {!isCreditCard(expense) && !isExpensePaid(expense) && (
-                                                    <button 
-                                                        onClick={() => openPayModal(expense.id)}
-                                                        className="p-2 rounded-lg text-muted hover:text-success hover:bg-success-light transition-colors"
-                                                        title="Pagar despesa"
-                                                    >
-                                                        <Wallet size={16} />
-                                                    </button>
-                                                )}
-                                                <button 
-                                                    onClick={() => handleView(expense.id)}
-                                                    className="p-2 rounded-lg text-muted hover:text-primary hover:bg-primary-light transition-colors"
-                                                    title="Visualizar detalhes"
-                                                >
-                                                    <Eye size={16} />
-                                                </button>
-                                                <button 
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setExpenseId(expense.id);
-                                                        setIsUpdate(true);
-                                                        openModal();
-                                                    }}
-                                                    className="p-2 rounded-lg text-muted hover:text-warning hover:bg-warning-light transition-colors"
-                                                    title="Editar Despesa"
-                                                >    
-                                                    <Pencil size={16} />
-                                                </button>
-                                                <button 
-                                                    type="button" 
-                                                    onClick={() => handleDelete(expense.id)}
-                                                    className="p-2 rounded-lg text-muted hover:text-danger hover:bg-danger-light transition-colors"
-                                                    title="Deletar Despesa"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            )}
+        <Card padding="sm" className="flex items-center gap-3.5">
+          <div className="w-10 h-10 rounded-xl bg-accent-light flex items-center justify-center flex-shrink-0">
+            <Clock className="w-5 h-5 text-accent" />
+          </div>
+          <div>
+            <p className="text-xs font-medium text-muted">Em aberto</p>
+            <p className="text-lg font-bold text-foreground tabular-nums">
+              {summary.pendingCount}{" "}
+              <span className="text-xs font-medium text-muted">
+                {summary.pendingCount === 1 ? "despesa" : "despesas"}
+              </span>
+            </p>
+          </div>
+        </Card>
+      </div>
 
-            <ModalExpense 
-                isOpen={isModalOpen} 
-                onClose={closeModal}
-                onCardAction={handleExpense}
-                isUpdate={isUpdate}
-                expenseId={expenseId}
-            />
-            <ModalPayExpense 
-                isOpen={isPayModalOpen}
-                onClose={() => setIsPayModalOpen(false)}
-                onConfirm={handlePay}
-                expenseId={expenseId}
-            />
-
-            {/* Modal Recriar Recorrente */}
-            {showRecreateModal && (
-                <div className="fixed inset-0 flex items-center justify-center z-50">
-                    <div className="fixed inset-0 bg-black opacity-50" onClick={handleRecreateDecline}></div>
-                    <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md mx-4 overflow-hidden">
-                        <div className="p-6 text-center">
-                            <div className="w-12 h-12 rounded-full bg-primary-light flex items-center justify-center mx-auto mb-4">
-                                <CheckCircle className="w-6 h-6 text-primary" />
-                            </div>
-                            <h3 className="text-lg font-semibold text-foreground mb-2">Despesa paga com sucesso!</h3>
-                            <p className="text-sm text-muted mb-6">Deseja recriar esta despesa como recorrente para o próximo período?</p>
-                            <div className="flex gap-3">
-                                <button
-                                    onClick={handleRecreateDecline}
-                                    className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium text-foreground hover:bg-secondary transition-colors"
-                                >
-                                    Não, obrigado
-                                </button>
-                                <button
-                                    onClick={handleRecreateConfirm}
-                                    className="flex-1 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary-hover transition-colors"
-                                >
-                                    Sim, recriar
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
+      {/* Filters + Month Navigator */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="inline-flex items-center p-1 rounded-xl bg-card border border-border w-fit">
+          {(
+            [
+              { id: "all", label: "Todas" },
+              { id: "pending", label: "Pendentes" },
+              { id: "paid", label: "Pagas" },
+            ] as const
+          ).map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setStatusFilter(tab.id)}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors ${
+                statusFilter === tab.id
+                  ? "bg-primary text-white shadow-xs"
+                  : "text-muted hover:text-foreground"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
-    )
+
+        <MonthNavigator
+          value={selectedMonth}
+          onChange={setSelectedMonth}
+          disableFuture
+        />
+      </div>
+
+      {error && (
+        <Alert variant="error" message={error} onDismiss={() => setError(null)} />
+      )}
+
+      {loading && <TableSkeleton rows={5} columns={7} />}
+
+      {isEmpty && (
+        <EmptyState
+          icon={<Receipt className="w-8 h-8" />}
+          title="Nenhuma despesa encontrada"
+          description="Ajuste o filtro, navegue para outro mês ou cadastre uma nova despesa."
+          action={
+            <Button icon={<Plus className="w-4 h-4" />} onClick={handleOpenNew}>
+              Nova Despesa
+            </Button>
+          }
+        />
+      )}
+
+      {!isEmpty && !loading && !error && (
+        <Card padding="none" className="overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-background/80">
+                  <th className="text-left px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-muted">
+                    Descrição
+                  </th>
+                  <th className="text-left px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-muted">
+                    Pagamento
+                  </th>
+                  <th className="text-right px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-muted">
+                    Estimado
+                  </th>
+                  <th className="text-right px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-muted">
+                    Valor Pago
+                  </th>
+                  <th className="text-left px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-muted">
+                    Vencimento
+                  </th>
+                  <th className="text-left px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-muted">
+                    Frequência
+                  </th>
+                  <th className="text-right px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-muted">
+                    Ações
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {visibleExpenses.map((expense) => {
+                  const paid = isExpensePaid(expense);
+                  return (
+                    <tr
+                      key={expense.id}
+                      className="hover:bg-background/70 transition-colors"
+                    >
+                      <td className="px-6 py-4 font-medium text-foreground">
+                        {expense.description}
+                      </td>
+                      <td className="px-6 py-4 text-muted">
+                        {expense.payment_type || "-"}
+                      </td>
+                      <td className="px-6 py-4 text-right text-muted tabular-nums">
+                        {formatBRL(expense.estimated_amount)}
+                      </td>
+                      <td className="px-6 py-4 text-right font-semibold text-foreground tabular-nums">
+                        {formatBRL(expense.amount)}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted tabular-nums">
+                            {formatDateBR(expense.due_date)}
+                          </span>
+                          {paid ? (
+                            <Badge variant="success" dot>
+                              Pago
+                            </Badge>
+                          ) : (
+                            <Badge variant="warning" dot>
+                              Pendente
+                            </Badge>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        {expense.frequency ? (
+                          <Badge variant="info">
+                            {expense.frequency === "monthly"
+                              ? "Mensal"
+                              : expense.frequency === "yearly"
+                              ? "Anual"
+                              : expense.frequency}
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-muted">-</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-end gap-1">
+                          {!isCreditCard(expense) && !paid && (
+                            <Button
+                              variant="success"
+                              size="sm"
+                              icon={<Wallet className="w-3.5 h-3.5" />}
+                              onClick={() => openPayModal(expense.id)}
+                              className="mr-1"
+                            >
+                              Pagar
+                            </Button>
+                          )}
+                          <IconButton
+                            tone="view"
+                            onClick={() => handleView(expense.id)}
+                            title="Visualizar detalhes"
+                            aria-label="Visualizar detalhes"
+                          >
+                            <Eye size={16} />
+                          </IconButton>
+                          <IconButton
+                            tone="edit"
+                            onClick={() => {
+                              setExpenseId(expense.id);
+                              setIsUpdate(true);
+                              openModal();
+                            }}
+                            title="Editar despesa"
+                            aria-label="Editar despesa"
+                          >
+                            <Pencil size={16} />
+                          </IconButton>
+                          <IconButton
+                            tone="delete"
+                            onClick={() => setDeleteTargetId(expense.id)}
+                            title="Excluir despesa"
+                            aria-label="Excluir despesa"
+                          >
+                            <Trash2 size={16} />
+                          </IconButton>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+
+      <ModalExpense
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        onCardAction={handleExpense}
+        isUpdate={isUpdate}
+        expenseId={expenseId}
+      />
+
+      <ModalPayExpense
+        isOpen={isPayModalOpen}
+        onClose={() => setIsPayModalOpen(false)}
+        onConfirm={handlePay}
+        expenseId={expenseId}
+      />
+
+      <ConfirmDialog
+        isOpen={showRecreateModal}
+        onClose={handleRecreateDecline}
+        onConfirm={handleRecreateConfirm}
+        title="Despesa paga com sucesso!"
+        description="Deseja recriar esta despesa como recorrente para o próximo período?"
+        confirmLabel="Sim, recriar"
+        cancelLabel="Não, obrigado"
+        tone="success"
+        loading={isRecreating}
+      />
+
+      <ConfirmDialog
+        isOpen={Boolean(deleteTargetId)}
+        onClose={() => setDeleteTargetId(null)}
+        onConfirm={handleConfirmDelete}
+        title="Excluir despesa"
+        description="Tem certeza que deseja excluir esta despesa? Esta ação não poderá ser desfeita."
+        confirmLabel="Excluir"
+        tone="danger"
+        loading={isDeleting}
+      />
+    </div>
+  );
 }
 
 export default Expense;

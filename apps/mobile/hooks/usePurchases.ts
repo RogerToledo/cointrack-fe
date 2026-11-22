@@ -1,31 +1,11 @@
+import type { Purchase } from '@cointrack/types';
 import { useCRUD } from './useCRUD';
-import { apiClient } from '../services/api';
-
-interface Purchase {
-  id: string;
-  description: string;
-  amount: number;
-  date: string;
-  installment_number: number;
-  place: string;
-  paid: boolean;
-  payment_type_id: string;
-  credit_card_id: string;
-  purchase_type_id: string;
-  person_id: string;
-  payment_type: string;
-  credit_card: string;
-  purchase_type: string;
-  person: string;
-}
+import { purchaseService } from '../services/api';
 
 export function usePurchases(month: string) {
   return useCRUD<Purchase>({
-    fetchFn: (page, limit) =>
-      apiClient
-        .get(`/v1/purchases?month=${month}&page=${page}&limit=${limit}`)
-        .then((r) => r.data),
-    deleteFn: (id) => apiClient.delete(`/v1/purchases/${id}`),
+    fetchFn: (page, limit) => purchaseService.getAll(month, page, limit),
+    deleteFn: (id) => purchaseService.delete(id),
     deps: [month],
     paginated: true,
   });

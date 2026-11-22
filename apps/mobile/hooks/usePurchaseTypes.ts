@@ -1,14 +1,10 @@
+import type { PurchaseType } from '@cointrack/types';
 import { useCRUD } from './useCRUD';
-import { apiClient } from '../services/api';
-
-interface PurchaseType {
-  id: string;
-  name: string;
-}
+import { purchaseTypeService } from '../services/api';
 
 export function usePurchaseTypes() {
   return useCRUD<PurchaseType>({
-    fetchFn: () => apiClient.get('/v1/purchaseTypes').then((r) => r.data),
-    deleteFn: (id) => apiClient.delete(`/v1/purchaseTypes/${id}`),
+    fetchFn: () => purchaseTypeService.getAll(),
+    deleteFn: (id) => purchaseTypeService.delete(id),
   });
 }

@@ -1,12 +1,13 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text } from 'react-native';
+import { theme } from '../constants/theme';
 
 const ANIMATION_DURATION = 300;
 
 const TOAST_COLORS: Record<ToastProps['type'], string> = {
-  success: '#16a34a',
-  error: '#dc2626',
-  info: '#2563eb',
+  success: theme.colors.success,
+  error: theme.colors.danger,
+  info: theme.colors.accent,
 };
 
 export interface ToastProps {
@@ -63,16 +64,16 @@ const styles = StyleSheet.create({
     right: 16,
     paddingVertical: 12,
     paddingHorizontal: 16,
-    borderRadius: 8,
+    borderRadius: theme.radius.md,
     zIndex: 9999,
     elevation: 5,
-    shadowColor: '#000',
+    shadowColor: theme.colors.primaryDark,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.2,
     shadowRadius: 4,
   },
   message: {
-    color: '#ffffff',
+    color: theme.colors.surface,
     fontSize: 14,
     fontWeight: '600',
     textAlign: 'center',
