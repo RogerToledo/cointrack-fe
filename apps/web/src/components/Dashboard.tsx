@@ -13,7 +13,6 @@ import {
   Wallet,
   PieChart,
   Tag,
-  AlertCircle,
 } from 'lucide-react';
 import {
   getDashboardSummary,
