@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
+import { useRouter } from "next/router";
 import { getPurchases, deletePurchase, type Purchase } from "@/services/purchase";
 import { getPurchasesInstallments, payInstallment, type Installment } from "@/services/installment";
 import {
@@ -7,6 +8,7 @@ import {
   getCurrentMonth,
   extractErrorMessage,
 } from "@cointrack/utils";
+import { parseMonthFromQuery } from "@/utils/competence";
 import {
   Eye,
   Layers,
@@ -35,6 +37,7 @@ import ModalPurchase from "./ModalPurchase";
 import ModalInstallments from "../installment/ModalInstallment";
 
 function Purchase() {
+  const router = useRouter();
   const toast = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [purchases, setPurchases] = useState<Purchase[]>([]);
@@ -45,13 +48,24 @@ function Purchase() {
   const [isInstallmentModalOpen, setIsInstallmentModalOpen] = useState(false);
   const [selectedPurchaseInstallments, setSelectedPurchaseInstallments] = useState<Installment[]>([]);
   const [selectedPurchaseIsCreditCard, setSelectedPurchaseIsCreditCard] = useState(false);
-  const [currentMonth, setCurrentMonth] = useState(getCurrentMonth);
+  const [currentMonth, setCurrentMonth] = useState(() => parseMonthFromQuery(router.query) ?? getCurrentMonth());
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    const fromQuery = parseMonthFromQuery({
+      month: router.query.month,
+      year: router.query.year,
+    });
+    if (fromQuery) {
+      setCurrentMonth(fromQuery);
+    }
+  }, [router.isReady, router.query.month, router.query.year]);
 
   const openModal = () => setIsModalOpen(true);
   const closeModal = () => {
@@ -148,10 +162,10 @@ function Purchase() {
     try {
       await deletePurchase(deleteTargetId);
       setDeleteTargetId(null);
-      toast.success("Compra excluída com sucesso.");
+      toast.success("Compra excluída com sucesso!");
       await fetchData(page);
     } catch (err) {
-      toast.error(extractErrorMessage(err, "Erro ao deletar a compra."));
+      toast.error(extractErrorMessage(err, "Erro ao excluir a compra."));
     } finally {
       setIsDeleting(false);
     }
@@ -169,70 +183,76 @@ function Purchase() {
     <div className="space-y-6">
       <PageHeader
         title="Compras"
-        subtitle="Gerencie compras à vista, parceladas e financiamentos"
+        subtitle="Gerencie todas as suas compras e parcelamentos"
         actions={
-          <Button icon={<Plus className="w-4 h-4" />} onClick={handleOpenNew}>
+          <Button
+            variant="primary"
+            icon={<Plus className="w-4 h-4" />}
+            onClick={handleOpenNew}
+          >
             Nova Compra
           </Button>
         }
       />
 
-      {/* Toolbar: Total + Search + Month */}
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-1">
-          <Card padding="sm" className="inline-flex items-center gap-3 min-w-[200px]">
-            <div className="w-10 h-10 rounded-xl bg-primary-light flex items-center justify-center flex-shrink-0">
-              <ShoppingCart className="w-5 h-5 text-primary" />
-            </div>
-            <div>
-              <p className="text-xs font-medium text-muted">Total do mês</p>
-              <p className="text-lg font-bold text-foreground tabular-nums">
-                {formatBRL(total)}
-              </p>
-            </div>
-          </Card>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <Card padding="sm" className="inline-flex">
+          <div className="px-1">
+            <p className="text-xs text-muted uppercase tracking-wide font-medium">
+              Total do mês
+            </p>
+            <p className="text-xl font-bold text-foreground tabular-nums mt-0.5">
+              {formatBRL(total)}
+            </p>
+          </div>
+        </Card>
 
-          <div className="relative flex-1 max-w-xs">
-            <Search className="w-4 h-4 text-muted-light absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1 sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar por descrição, local ou pessoa..."
-              className="w-full pl-10 pr-3.5 py-2.5 text-sm rounded-xl border border-border bg-card text-foreground placeholder:text-muted-light focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+              placeholder="Buscar compra..."
+              className="w-full pl-9 pr-3 py-2 rounded-xl border border-border bg-card text-foreground placeholder:text-muted text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
             />
           </div>
-        </div>
 
-        <MonthNavigator
-          value={currentMonth}
-          onChange={setCurrentMonth}
-          disableFuture
-        />
+          <MonthNavigator value={currentMonth} onChange={setCurrentMonth} />
+        </div>
       </div>
 
       {error && (
-        <Alert variant="error" message={error} onDismiss={() => setError(null)} />
+        <Alert
+          variant="error"
+          message={error}
+          onDismiss={() => setError(null)}
+        />
       )}
 
-      {loading && <TableSkeleton rows={6} columns={7} />}
+      {loading && <TableSkeleton rows={5} columns={7} />}
 
       {isEmpty && (
         <EmptyState
-          icon={<ShoppingCart className="w-8 h-8" />}
-          title={
-            searchQuery
-              ? "Nenhuma compra encontrada para a busca"
-              : "Nenhuma compra cadastrada"
-          }
+          icon={<ShoppingCart className="w-8 h-8 text-muted" />}
+          title={searchQuery ? "Nenhuma compra encontrada" : "Nenhuma compra cadastrada"}
           description={
             searchQuery
-              ? "Tente limpar o filtro ou buscar por outro termo."
-              : "Registre sua primeira compra neste mês para acompanhar seus gastos."
+              ? "Tente buscar com outros termos."
+              : "Registre sua primeira compra para começar a acompanhar seus gastos."
           }
           action={
-            !searchQuery && (
-              <Button icon={<Plus className="w-4 h-4" />} onClick={handleOpenNew}>
+            searchQuery ? (
+              <Button variant="ghost" size="sm" onClick={() => setSearchQuery("")}>
+                Limpar busca
+              </Button>
+            ) : (
+              <Button
+                variant="primary"
+                icon={<Plus className="w-4 h-4" />}
+                onClick={handleOpenNew}
+              >
                 Nova Compra
               </Button>
             )
@@ -241,30 +261,30 @@ function Purchase() {
       )}
 
       {!isEmpty && !loading && !error && (
-        <Card padding="none" className="overflow-hidden">
+        <Card padding="none">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border bg-background/80">
-                  <th className="text-left px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-muted">
+                <tr className="border-b border-border bg-slate-50/50">
+                  <th className="text-left px-6 py-4 font-semibold text-foreground text-xs uppercase tracking-wider">
                     Pessoa
                   </th>
-                  <th className="text-left px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-muted">
+                  <th className="text-left px-6 py-4 font-semibold text-foreground text-xs uppercase tracking-wider">
                     Descrição
                   </th>
-                  <th className="text-left px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-muted">
+                  <th className="text-left px-6 py-4 font-semibold text-foreground text-xs uppercase tracking-wider">
                     Local
                   </th>
-                  <th className="text-right px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-muted">
+                  <th className="text-right px-6 py-4 font-semibold text-foreground text-xs uppercase tracking-wider">
                     Valor
                   </th>
-                  <th className="text-left px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-muted">
+                  <th className="text-left px-6 py-4 font-semibold text-foreground text-xs uppercase tracking-wider">
                     Data
                   </th>
-                  <th className="text-left px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-muted">
+                  <th className="text-left px-6 py-4 font-semibold text-foreground text-xs uppercase tracking-wider">
                     Parcelas
                   </th>
-                  <th className="text-right px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-muted">
+                  <th className="text-right px-6 py-4 font-semibold text-foreground text-xs uppercase tracking-wider">
                     Ações
                   </th>
                 </tr>
@@ -273,12 +293,12 @@ function Purchase() {
                 {filteredPurchases.map((item) => (
                   <tr
                     key={item.id}
-                    className="hover:bg-background/70 transition-colors"
+                    className="hover:bg-slate-50/60 transition-colors"
                   >
                     <td className="px-6 py-4 font-medium text-foreground">
-                      {item.person}
+                      {item.person || "-"}
                     </td>
-                    <td className="px-6 py-4 text-foreground">
+                    <td className="px-6 py-4 text-muted">
                       {item.description || "-"}
                     </td>
                     <td className="px-6 py-4 text-muted">{item.place || "-"}</td>

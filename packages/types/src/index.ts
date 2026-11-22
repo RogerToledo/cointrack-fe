@@ -326,3 +326,24 @@ export interface PurchaseType {
 
 export type PurchaseTypeResponse = ApiResponse<PurchaseType>;
 export type PurchaseTypesResponse = ApiResponse<PurchaseType[]>;
+
+// Dashboard Summary (Spec 0002)
+export type DashboardSummaryType = 'PURCHASE' | 'EXPENSE' | 'INVESTMENT' | 'INVOICE';
+
+export interface DashboardSummaryItem {
+  type: DashboardSummaryType;
+  description: string;
+  total_amount: number;
+  items_count: number;
+  competence: string;
+}
+
+export interface DashboardSummaryData {
+  total_month: number;
+  competence: string;
+  overview?: DashboardOverview;
+  items: DashboardSummaryItem[];
+  categories_breakdown?: CategoryBreakdown[];
+}
+
+export type DashboardSummaryResponse = ApiResponse<DashboardSummaryData>;
