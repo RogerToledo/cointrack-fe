@@ -1,5 +1,15 @@
 export { createApiClient } from './client';
 export type { ApiClientConfig, StorageAdapter } from './client';
+export { createAuthService } from './auth';
 export { createDashboardService } from './dashboard';
 export { createCreditCardService } from './creditCard';
-export { createAuthService } from './auth';
+export { createPurchaseService } from './purchase';
+export { createExpenseService } from './expense';
+export { createEarningService } from './earning';
+export { createInvestmentService } from './investment';
+export { createInvoiceService } from './invoice';
+export { createInstallmentService } from './installment';
+export { createFamilyService } from './family';
+export { createPersonService } from './person';
+export { createPaymentTypeService } from './paymentType';
+export { createPurchaseTypeService } from './purchaseType';

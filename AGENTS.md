@@ -13,18 +13,17 @@
 ```
 cointrack-fe/
   apps/
-    web/        @cointrack/web     Next.js 16 + React 19 + Tailwind 4
-    mobile/     @cointrack/mobile  Expo 57 + React Native 0.86 + React 19
+    web/        @cointrack/web       Next.js 16 + React 19 + Tailwind 4
+    mobile/     @cointrack/mobile    Expo 57 + React Native 0.86 + React 19
   packages/
-    services/   @cointrack/services  API client factory (plataforma-agnóstico)
+    services/   @cointrack/services  API client e factories plataforma-agnósticas
     types/      @cointrack/types     Interfaces TypeScript compartilhadas
-    utils/      @cointrack/utils     Utilitários (formatBRL, etc)
-  src/          ← LEGADO (espelho de apps/web/src/, manter em sync manual)
+    utils/      @cointrack/utils     Utilitários compartilhados (formatBRL, JWT, datas, erros, paleta)
 ```
 
-### Regra crítica: src/ legado
+### Deploy (Vercel)
 
-O Vercel builda a partir da raiz usando o `tsconfig.json` da raiz que mapeia `@/*` para `./src/*`. Toda alteração em `apps/web/src/` **DEVE** ser copiada para `src/` correspondente. Sempre execute `npm run build` na raiz para validar.
+O projeto Web vive exclusivamente em `apps/web` (fonte única de verdade). Configure o **Root Directory** na Vercel para `apps/web` usando `pnpm`.
 
 ---
 
@@ -35,85 +34,47 @@ O Vercel builda a partir da raiz usando o `tsconfig.json` da raiz que mapeia `@/
 | Framework | Next.js 16 (Pages Router) | Expo SDK 57 |
 | React | 19 | 19.2 |
 | Linguagem | TypeScript 5 (strict) | TypeScript 6 (strict) |
-| Estilo | Tailwind 4 + CSS vars | StyleSheet.create() |
-| UI | Flowbite 3 + Lucide React | Componentes nativos |
-| HTTP | Axios | Axios |
+| Estilo | Tailwind 4 + CSS vars (`globals.css`) | `StyleSheet.create()` + `constants/theme.ts` |
+| UI | Biblioteca interna `components/ui/` + Lucide React | Componentes nativos + Ionicons |
+| HTTP | Axios via `@cointrack/services` | Axios via `@cointrack/services` |
 | Gráficos | Chart.js 4 + react-chartjs-2 | — |
 | State | React Context API | React Context API |
 | Segurança | localStorage (token) | expo-secure-store |
-| Bundler | Turbopack | Metro |
+| Gerenciador | pnpm workspaces | pnpm workspaces |
+
+---
+
+## Paleta Oficial & Tokens
+
+| Papel | Nome | HEX | Token Web |
+|-------|------|-----|-----------|
+| Fundo Principal | Branco Gelo | `#F8FAFC` | `--background` (`bg-background`) |
+| Superfícies / Cards | Branco Puro | `#FFFFFF` | `--card` (`bg-card`) |
+| Primária (Ação) | Azul Cobalto | `#1D4ED8` | `--primary` (`bg-primary`) |
+| Primária (Escura) | Azul Marinho | `#0F172A` | `--foreground` (`text-foreground`) |
+| Secundária (Destaque) | Azul Céu | `#0EA5E9` | `--accent` (`text-accent`) |
+| Sucesso / Positivo | Verde Esmeralda | `#10B981` | `--success` (`bg-success` / `text-success`) |
+| Sucesso (Suave) | Verde Menta Claro | `#ECFDF5` | `--success-light` (`bg-success-light`) |
+| Bordas e Divisores | Cinza Azulado | `#E2E8F0` | `--border` (`border-border`) |
 
 ---
 
 ## Convenções de Código
 
-### Nomenclatura de arquivos
+### Componentes UI (Web)
 
-| Tipo | Padrão | Exemplo |
-|------|--------|---------|
-| Componente | PascalCase | `CreditCard.tsx`, `ModalCreditCard.tsx` |
-| Diretório de entidade | lowercase | `creditCard/`, `earning/` |
-| Service | camelCase | `creditCard.tsx`, `earning.tsx` |
-| Hook | use + PascalCase | `usePurchases.ts`, `useMonthNavigation.ts` |
-| Context | PascalCase + Context | `AuthContext.tsx`, `FamilyContext.tsx` |
-| Página (web) | camelCase | `creditCard.tsx`, `paymentType.tsx` |
-| Util | camelCase | `currency.ts`, `errorMessage.ts` |
+Use sempre os primitivos em `apps/web/src/components/ui/`: `Button`, `IconButton`, `Badge`, `Card`, `PageHeader`, `MonthNavigator`, `Modal`, `ConfirmDialog`, `Alert`, `EmptyState`, `TableSkeleton`, `CardSkeleton`, `Pagination`, `Input`, `Select`, `Checkbox`.
 
-### Padrões de componente
+- **Nunca** usar `window.confirm()` ou `alert()` — usar `ConfirmDialog` e `useToast()`
+- **Nunca** usar cores hardcoded — usar tokens semânticos (`bg-background`, `bg-card`, `bg-primary`, `text-foreground`, `text-accent`, `bg-success`, `bg-success-light`, `border-border`)
+- **Sempre** componentes funcionais (nunca class, exceto ErrorBoundary em `_app.tsx`)
+- **Não usar Redux, Zustand ou similar** — usar apenas React Context API (`AuthProvider > FamilyProvider > ToastProvider > Layout > Pages`)
 
-- **Sempre** componentes funcionais (nunca class, exceto ErrorBoundary)
-- Export default no final do arquivo
-- Modal: componente separado `Modal{Entity}.tsx` com props `isOpen`, `onClose`, `on{Action}`
-- Web: `function ComponentName()` ou `const ComponentName = () =>`
-- Mobile: `export default function ComponentName()`
+### Camada de Serviço
 
-### Estado
-
-- **Não usar Redux, Zustand ou similar** — usar apenas React Context API
-- Contexts: `AuthProvider`, `FamilyProvider`, `ToastProvider` (mobile)
-- Ordem de wrapping: `AuthProvider > FamilyProvider > ToastProvider > Layout > Pages`
-
-### Forms
-
-- Sem usar Formik ou React Hook Form
-- Estado manual com `useState` por campo
-- Validação via funções puras exportadas: `validateLoginForm()`, `validatePurchaseForm()`
-- Erros extraídos com `axios.isAxiosError()` + `err.response?.data?.message`
-
-### Estilo (Web)
-
-- Tailwind CSS 4 com custom properties definidas em `globals.css`
-- **Nunca** usar cores hardcoded — usar tokens: `text-foreground`, `bg-card`, `border-border`, `text-primary`
-- Dark mode automático via `@media (prefers-color-scheme: dark)`
-- Bordas arredondadas: `rounded-xl` (padrão)
-- Design tokens: `--primary`, `--card`, `--border`, `--success`, `--warning`, `--danger`, etc.
-
-### Estilo (Mobile)
-
-- `StyleSheet.create()` com cores hardcoded (sem theme system compartilhado)
-- Expo `userInterfaceStyle: automatic` para light/dark
-
----
-
-## Camada de Serviço
-
-### Padrão legado (web)
-
-```typescript
-// services/config.tsx — instância axios singleton
-// services/{entity}.tsx — funções standalone
-export const getEarnings = async (year?: number, month?: number) => { ... };
-```
-
-### Padrão novo (packages/services)
-
-```typescript
-// Factory function plataforma-agnóstico
-export function createApiClient(config: ApiClientConfig): AxiosInstance { ... }
-export function createCreditCardService(client: AxiosInstance) { ... }
-```
-
-O mobile já usa o padrão novo via `apps/mobile/services/api.ts`.
+Todos os contratos e chamadas HTTP vivem em `packages/services/src/` com tipos em `packages/types/src/`.
+- Web instancia em `apps/web/src/services/api.ts` (com façades `.ts` por módulo)
+- Mobile instancia em `apps/mobile/services/api.ts`
 
 ### Convenção de resposta da API
 
@@ -121,79 +82,34 @@ O mobile já usa o padrão novo via `apps/mobile/services/api.ts`.
 { message: T, statusCode: number }
 ```
 
-`T` é o payload real (array ou objeto). Sempre verificar `Array.isArray(data.message)` antes de setar state.
-
-### Autenticação
-
-- Token JWT no header `Authorization: Bearer {token}`
-- 401 em rotas não-auth → limpar token + redirecionar para `/login`
-- Web: `localStorage` | Mobile: `expo-secure-store`
-- Token expira em 24h (verificação manual no AuthContext)
-
----
-
-## mobile: Rotas e Componentes
-
-### Rotas (expo-router file-based)
-
-```
-app/
-  _layout.tsx              Root: GestureHandler > SafeArea > Auth > Toast > Family
-  (auth)/
-    login.tsx, register.tsx, forgot-password.tsx
-  (tabs)/
-    _layout.tsx            Tab navigator (Dashboard, Compras)
-    index.tsx              Dashboard
-    purchases/
-      index.tsx            Lista de compras
-      form.tsx             Formulário criar/editar
-```
-
-### Componentes reutilizáveis (mobile)
-
-`ConfirmDialog`, `EmptyState`, `ErrorState`, `FamilySelector`, `FormInput`, `LoadingScreen`, `MonthNavigator`, `MonthPicker`, `PullToRefreshList`, `SwipeableRow`, `Toast`
-
-### Hooks (mobile)
-
-`useCRUD<T>` — hook genérico com paginação, refresh, delete. Cada entidade tem um wrapper: `usePurchases`, `useEarnings`, etc.
+Sempre verificar `Array.isArray(data.message)` antes de setar state.
 
 ---
 
 ## Regras importantes
 
-1. **Sync manual web/legado**: qualquer mudança em `apps/web/src/` deve ser copiada para `src/`
-2. **Build validation**: sempre rodar `npm run build` na raiz antes de commit
-3. **Nunca committar secrets** — `.env` está em `.gitignore`
-4. **PT-BR** em toda UI e commits
-5. **Branch naming**: `feat/fn-{issue}-{description}`
-6. **Parcelamento**: compras parceladas usam `POST /v1/expenses/recreate` com `{ id: expenseId }` após pagamento
-7. **Month params**: earnings/deductions usam `year` e `month` separados (ex: `?year=2026&month=9`), purchases usa `month=YYYY-MM`
-8. **NÃO adicionar dependências** sem necessidade — o projeto é enxuto de propósito
-9. **NÃO usar class components** (exceto ErrorBoundary em `_app.tsx`)
-10. **Mobile não tem testes escritos** — o `TEST_PLAN.md` existe mas nenhum teste foi implementado
+1. **Build & quality validation**: sempre rodar `pnpm typecheck`, `pnpm lint`, `pnpm test` e `pnpm build` antes de commit
+2. **Nunca committar secrets** — `.env` está em `.gitignore`
+3. **PT-BR** em toda UI e commits
+4. **Branch naming**: `feat/fn-{issue}-{description}`
+5. **Parcelamento**: despesas recorrentes usam `POST /v1/expenses/recreate` com `{ id: expenseId }` após pagamento
+6. **Month params**: earnings/expenses usam `year` e `month` separados (ex: `?year=2026&month=9`), purchases usa `month=YYYY-MM`
+7. **NÃO adicionar dependências** sem necessidade — o projeto é enxuto de propósito
 
 ---
 
 ## Comandos essenciais
 
 ```bash
-# Build completo (valida tudo)
-npm run build          # na raiz
+# Validação completa
+pnpm typecheck
+pnpm lint
+pnpm test
+pnpm build
 
 # Dev web
-cd apps/web && npm run dev
+pnpm dev
 
 # Dev mobile
-cd apps/mobile && npx expo start
-
-# Lint
-cd apps/web && npm run lint
+pnpm mobile
 ```
-
----
-
-## Backend
-
-- URL: `http://127.0.0.1:8180` (dev)
-- Proxy configurado no `package.json` da raiz
-- Endpoints por módulo: `creditCard`, `deduction`, `earning`, `expense`, `installment`, `paymentType`, `person`, `purchase`, `purchaseType`, `auth`, `dashboard`, `invoice`, `profile`, `family`

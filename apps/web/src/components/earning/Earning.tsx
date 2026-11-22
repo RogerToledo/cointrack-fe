@@ -1,265 +1,343 @@
-import { useState, useEffect, useCallback } from "react";
-import { getEarningsWithRecords, deleteEarning, EarningsResponse} from "@/services/earning";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import Link from "next/link";
+import {
+  getEarningsWithRecords,
+  deleteEarning,
+  EarningsResponse,
+} from "@/services/earning";
 import { useAuth } from "@/contexts/AuthContext";
-import { formatBRL } from "@/utils/currency";
+import { useToast } from "@/contexts/ToastContext";
+import {
+  formatBRL,
+  formatDateBR,
+  getCurrentMonth,
+  parseYearMonth,
+  extractErrorMessage,
+} from "@cointrack/utils";
 import ModalEarning from "./ModalEarning";
 import ModalConfirmDelete from "@/components/common/ModalConfirmDelete";
-import axios from "axios";
-import { Eye, Pencil, Trash2, Plus, DollarSign, AlertCircle, X, ChevronLeft, ChevronRight } from 'lucide-react';
-import Link from 'next/link';
-
-function getCurrentMonth() {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-}
+import {
+  Eye,
+  Pencil,
+  Trash2,
+  Plus,
+  CircleDollarSign,
+  TrendingUp,
+} from "lucide-react";
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  IconButton,
+  MonthNavigator,
+  PageHeader,
+  TableSkeleton,
+} from "@/components/ui";
 
 function Earning() {
-    const [earnings, setEarnings] = useState<EarningsResponse>({
-        message: [],
-        statusCode: 0
-    });
-    const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-    const [error, setError] = useState<string | null>(null);
-    const [isUpdate, setIsUpdate] = useState<boolean>(false);
-    const [earningId, setEarningId] = useState<string>("");
-    const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonth);
-    const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
-    const [isDeleting, setIsDeleting] = useState<boolean>(false);
-    const { user } = useAuth();
+  const toast = useToast();
+  const [earnings, setEarnings] = useState<EarningsResponse>({
+    message: [],
+    statusCode: 0,
+  });
+  const [loading, setLoading] = useState<boolean>(true);
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isUpdate, setIsUpdate] = useState<boolean>(false);
+  const [earningId, setEarningId] = useState<string>("");
+  const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonth);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const { user } = useAuth();
 
-    const openModal = () => setIsModalOpen(true);
-    const closeModal = () => setIsModalOpen(false);
+  const openModal = () => setIsModalOpen(true);
+  const closeModal = () => setIsModalOpen(false);
 
-    const fetchData = useCallback(async () => {
-        setError(null);
-        const [year, month] = selectedMonth.split('-').map(Number);
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    const [year, month] = parseYearMonth(selectedMonth);
 
-        try {
-            const data = await getEarningsWithRecords(year, month, user?.id);
-            if (data) {
-                setEarnings(data);
-            }
-        } catch (err) {
-            if (err instanceof Error) {
-                setError(err.message);
-            } else {
-                setError("An unknown error occurred");
-            }
+    try {
+      const data = await getEarningsWithRecords(year, month, user?.id);
+      if (data) {
+        setEarnings(data);
+      }
+    } catch (err) {
+      setError(extractErrorMessage(err, "Erro ao carregar registros de ganhos."));
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedMonth, user?.id]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleEarning = async () => {
+    await fetchData();
+    closeModal();
+  };
+
+  const handleView = (id: string) => {
+    setEarningId(id);
+    setIsUpdate(false);
+    openModal();
+  };
+
+  const handleDelete = async (keepHistory: boolean) => {
+    if (!deleteTargetId) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteEarning(deleteTargetId, keepHistory);
+      setDeleteTargetId(null);
+      toast.success("Registro de ganho excluído com sucesso.");
+      await fetchData();
+    } catch (err) {
+      toast.error(extractErrorMessage(err, "Erro ao excluir ganho."));
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleOpenNew = () => {
+    setEarningId("");
+    setIsUpdate(false);
+    openModal();
+  };
+
+  const list = useMemo(
+    () => (Array.isArray(earnings?.message) ? earnings.message : []),
+    [earnings?.message]
+  );
+
+  const totals = useMemo(() => {
+    return list.reduce(
+      (acc, item) => ({
+        gross: acc.gross + (item.record?.gross_pay ?? 0),
+        net: acc.net + (item.record?.net_pay ?? 0),
+        deduction: acc.deduction + (item.record?.deduction ?? 0),
+      }),
+      { gross: 0, net: 0, deduction: 0 }
+    );
+  }, [list]);
+
+  const isEmpty = !loading && !error && list.length === 0;
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Ganhos"
+        subtitle="Acompanhe seus lançamentos mensais de receitas"
+        actions={
+          <Button icon={<Plus className="w-4 h-4" />} onClick={handleOpenNew}>
+            Novo Registro
+          </Button>
         }
-    }, [selectedMonth, user?.id]);
+      />
 
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
-
-    const handleEarning = async() => {
-        await fetchData();
-        closeModal();
-    }
-
-    const handleView = (id: string) => {
-        setEarningId(id);
-        setIsUpdate(false);
-        openModal();
-    }
-
-    const handleDelete = async (keepHistory: boolean) => {
-        if (!deleteTargetId) return;
-
-        setIsDeleting(true);
-        try {
-            await deleteEarning(deleteTargetId, keepHistory)
-            setDeleteTargetId(null);
-            await fetchData();
-        } catch (err) {
-            console.error(err);
-            if (axios.isAxiosError(err)) {
-                const apiMessage = err.response?.data?.message;
-                setError(apiMessage || "Ocorreu um erro inesperado.");
-            } else {
-                setError("Ocorreu um erro inesperado.");
-            }
-        } finally {
-            setIsDeleting(false);
-        }
-    }
-
-    const handleOpenNew = () => {
-        setEarningId("");
-        setIsUpdate(false);
-        openModal();
-    }
-
-    const isEmpty = !error && (!Array.isArray(earnings?.message) || earnings.message.length === 0);
-
-    return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold text-foreground">Registro de Ganhos</h1>
-                    <p className="text-muted mt-1">Gerencie seus ganhos e receitas</p>
-                </div>
-                <div className="flex items-center gap-3">
-                    <Link href="/earnings">
-                        <button 
-                            type="button" 
-                            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-card text-sm font-medium text-foreground hover:bg-secondary transition-all"
-                        >
-                            Ganho
-                        </button>
-                    </Link>
-                    <button 
-                        type="button" 
-                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary-hover focus:ring-4 focus:ring-primary/20 transition-all"
-                        onClick={handleOpenNew}
-                    >
-                        <Plus className="w-4 h-4" />
-                        Novo Registro
-                    </button>
-                </div>
-            </div>
-
-            {/* Month Navigator */}
-            <div className="flex items-center justify-end gap-2">
-                <button
-                    onClick={() => {
-                        const [year, month] = selectedMonth.split('-').map(Number);
-                        const prev = new Date(year, month - 2, 1);
-                        setSelectedMonth(`${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`);
-                    }}
-                    className="p-2 rounded-lg hover:bg-muted/20 transition-colors"
-                    aria-label="Mês anterior"
-                >
-                    <ChevronLeft className="w-4 h-4 text-muted" />
-                </button>
-                <input
-                    type="month"
-                    value={selectedMonth}
-                    onChange={(e) => setSelectedMonth(e.target.value)}
-                    className="bg-card border border-border rounded-xl px-4 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                />
-                <button
-                    onClick={() => {
-                        const [year, month] = selectedMonth.split('-').map(Number);
-                        const next = new Date(year, month, 1);
-                        setSelectedMonth(`${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`);
-                    }}
-                    disabled={selectedMonth === getCurrentMonth()}
-                    className="p-2 rounded-lg hover:bg-muted/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                    aria-label="Próximo mês"
-                >
-                    <ChevronRight className="w-4 h-4 text-muted" />
-                </button>
-            </div>
-
-            {/* Error Alert */}
-            {error && (
-                <div className="flex items-center gap-3 p-4 rounded-xl bg-danger-light border border-danger/20" role="alert">
-                    <AlertCircle className="w-5 h-5 text-danger flex-shrink-0" />
-                    <p className="text-sm text-danger flex-1">{error}</p>
-                    <button onClick={() => setError(null)} className="text-danger hover:text-danger/70 transition-colors">
-                        <X className="w-4 h-4" />
-                    </button>
-                </div>
-            )}
-
-            {/* Empty State */}
-            {isEmpty && (
-                <div className="bg-card rounded-2xl border border-border p-12 text-center">
-                    <div className="w-16 h-16 rounded-2xl bg-success-light flex items-center justify-center mx-auto mb-4">
-                        <DollarSign className="w-8 h-8 text-success" />
-                    </div>
-                    <h3 className="text-lg font-medium text-foreground mb-1">Nenhum ganho cadastrado</h3>
-                    <p className="text-sm text-muted">Comece registrando seus ganhos mensais.</p>
-                </div>
-            )}
-
-            {/* Table */}
-            {!isEmpty && (
-                <div className="bg-card rounded-2xl border border-border overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="border-b border-border bg-secondary/50">
-                                    <th className="text-left px-6 py-4 font-semibold text-foreground">Usuário</th>
-                                    <th className="text-left px-6 py-4 font-semibold text-foreground">Descrição</th>
-                                    <th className="text-left px-6 py-4 font-semibold text-foreground">Periodicidade</th>
-                                    <th className="text-left px-6 py-4 font-semibold text-foreground">Data</th>
-                                    <th className="text-right px-6 py-4 font-semibold text-foreground">Bruto</th>
-                                    <th className="text-right px-6 py-4 font-semibold text-foreground">Líquido</th>
-                                    <th className="text-right px-6 py-4 font-semibold text-foreground">Dedução</th>
-                                    <th className="text-right px-6 py-4 font-semibold text-foreground">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-border">
-                                {earnings?.message.map((earning) => (
-                                    <tr key={earning.id} className="hover:bg-secondary/30 transition-colors">
-                                        <td className="px-6 py-4 font-medium text-foreground">{earning.personName || '-'}</td>
-                                        <td className="px-6 py-4 text-muted">{earning.description}</td>
-                                        <td className="px-6 py-4 text-muted">{earning.periodicity}</td>
-                                        <td className="px-6 py-4 text-muted">
-                                            {earning.record?.date ? new Date(earning.record.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '-'}
-                                        </td>
-                                        <td className="px-6 py-4 text-right font-medium text-foreground">{formatBRL(earning.record?.gross_pay)}</td>
-                                        <td className="px-6 py-4 text-right font-medium text-foreground">{formatBRL(earning.record?.net_pay)}</td>
-                                        <td className="px-6 py-4 text-right font-medium text-foreground">{formatBRL(earning.record?.deduction)}</td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center justify-end gap-1">
-                                                <button 
-                                                    onClick={() => handleView(earning.id)}
-                                                    className="p-2 rounded-lg text-muted hover:text-primary hover:bg-primary-light transition-colors"
-                                                    title="Visualizar detalhes"
-                                                >
-                                                    <Eye size={16} />
-                                                </button>
-                                                <button 
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setEarningId(earning.id);
-                                                        setIsUpdate(true);
-                                                        openModal();
-                                                    }}
-                                                    className="p-2 rounded-lg text-muted hover:text-warning hover:bg-warning-light transition-colors"
-                                                    title="Editar ganho"
-                                                >
-                                                    <Pencil size={16} />
-                                                </button>
-                                                <button 
-                                                    type="button" 
-                                                    onClick={() => setDeleteTargetId(earning.id)}
-                                                    className="p-2 rounded-lg text-muted hover:text-danger hover:bg-danger-light transition-colors"
-                                                    title="Excluir ganho"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            )}
-
-            <ModalEarning
-                isOpen={isModalOpen} 
-                onClose={closeModal} 
-                onCardAction={handleEarning}
-                isUpdate={isUpdate}
-                earningId={earningId}
-            />
-
-            <ModalConfirmDelete
-                isOpen={deleteTargetId !== null}
-                onClose={() => setDeleteTargetId(null)}
-                onConfirm={handleDelete}
-                message="Tem certeza que deseja deletar este ganho?"
-                isLoading={isDeleting}
-            />
+      {/* Segmented Tabs + Month Navigator */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="inline-flex items-center p-1 rounded-xl bg-card border border-border w-fit">
+          <Link
+            href="/earning"
+            className="px-4 py-1.5 rounded-lg text-xs font-semibold bg-primary text-white shadow-xs"
+          >
+            Registros do Mês
+          </Link>
+          <Link
+            href="/earnings"
+            className="px-4 py-1.5 rounded-lg text-xs font-medium text-muted hover:text-foreground transition-colors"
+          >
+            Fontes de Ganho
+          </Link>
         </div>
-    )
+
+        <MonthNavigator
+          value={selectedMonth}
+          onChange={setSelectedMonth}
+          disableFuture
+        />
+      </div>
+
+      {/* Totals Strip */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card padding="sm" className="flex items-center gap-3.5">
+          <div className="w-10 h-10 rounded-xl bg-success-light flex items-center justify-center flex-shrink-0">
+            <TrendingUp className="w-5 h-5 text-success" />
+          </div>
+          <div>
+            <p className="text-xs font-medium text-muted">Total Líquido</p>
+            <p className="text-lg font-bold text-success tabular-nums">
+              {formatBRL(totals.net)}
+            </p>
+          </div>
+        </Card>
+
+        <Card padding="sm" className="flex items-center gap-3.5">
+          <div className="w-10 h-10 rounded-xl bg-primary-light flex items-center justify-center flex-shrink-0">
+            <CircleDollarSign className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <p className="text-xs font-medium text-muted">Total Bruto</p>
+            <p className="text-lg font-bold text-foreground tabular-nums">
+              {formatBRL(totals.gross)}
+            </p>
+          </div>
+        </Card>
+
+        <Card padding="sm" className="flex items-center gap-3.5">
+          <div className="w-10 h-10 rounded-xl bg-accent-light flex items-center justify-center flex-shrink-0">
+            <CircleDollarSign className="w-5 h-5 text-accent" />
+          </div>
+          <div>
+            <p className="text-xs font-medium text-muted">Deduções</p>
+            <p className="text-lg font-bold text-foreground tabular-nums">
+              {formatBRL(totals.deduction)}
+            </p>
+          </div>
+        </Card>
+      </div>
+
+      {error && (
+        <Alert variant="error" message={error} onDismiss={() => setError(null)} />
+      )}
+
+      {loading && <TableSkeleton rows={5} columns={8} />}
+
+      {isEmpty && (
+        <EmptyState
+          icon={<CircleDollarSign className="w-8 h-8" />}
+          iconBg="success"
+          title="Nenhum ganho registrado neste mês"
+          description="Comece registrando seus ganhos mensais ou cadastre uma nova fonte de ganho."
+          action={
+            <Button icon={<Plus className="w-4 h-4" />} onClick={handleOpenNew}>
+              Novo Registro
+            </Button>
+          }
+        />
+      )}
+
+      {!isEmpty && !loading && !error && (
+        <Card padding="none" className="overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-background/80">
+                  <th className="text-left px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-muted">
+                    Usuário
+                  </th>
+                  <th className="text-left px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-muted">
+                    Descrição
+                  </th>
+                  <th className="text-left px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-muted">
+                    Periodicidade
+                  </th>
+                  <th className="text-left px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-muted">
+                    Data
+                  </th>
+                  <th className="text-right px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-muted">
+                    Bruto
+                  </th>
+                  <th className="text-right px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-muted">
+                    Líquido
+                  </th>
+                  <th className="text-right px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-muted">
+                    Dedução
+                  </th>
+                  <th className="text-right px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-muted">
+                    Ações
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {list.map((earning) => (
+                  <tr
+                    key={earning.id}
+                    className="hover:bg-background/70 transition-colors"
+                  >
+                    <td className="px-6 py-4 font-medium text-foreground">
+                      {earning.personName || "-"}
+                    </td>
+                    <td className="px-6 py-4 text-foreground">
+                      {earning.description}
+                    </td>
+                    <td className="px-6 py-4">
+                      <Badge variant="info">{earning.periodicity}</Badge>
+                    </td>
+                    <td className="px-6 py-4 text-muted tabular-nums">
+                      {formatDateBR(earning.record?.date)}
+                    </td>
+                    <td className="px-6 py-4 text-right font-medium text-foreground tabular-nums">
+                      {formatBRL(earning.record?.gross_pay)}
+                    </td>
+                    <td className="px-6 py-4 text-right font-semibold text-success tabular-nums">
+                      {formatBRL(earning.record?.net_pay)}
+                    </td>
+                    <td className="px-6 py-4 text-right text-muted tabular-nums">
+                      {formatBRL(earning.record?.deduction)}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-end gap-1">
+                        <IconButton
+                          tone="view"
+                          onClick={() => handleView(earning.id)}
+                          title="Visualizar detalhes"
+                          aria-label="Visualizar detalhes"
+                        >
+                          <Eye size={16} />
+                        </IconButton>
+                        <IconButton
+                          tone="edit"
+                          onClick={() => {
+                            setEarningId(earning.id);
+                            setIsUpdate(true);
+                            openModal();
+                          }}
+                          title="Editar ganho"
+                          aria-label="Editar ganho"
+                        >
+                          <Pencil size={16} />
+                        </IconButton>
+                        <IconButton
+                          tone="delete"
+                          onClick={() => setDeleteTargetId(earning.id)}
+                          title="Excluir ganho"
+                          aria-label="Excluir ganho"
+                        >
+                          <Trash2 size={16} />
+                        </IconButton>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+
+      <ModalEarning
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        onCardAction={handleEarning}
+        isUpdate={isUpdate}
+        earningId={earningId}
+      />
+
+      <ModalConfirmDelete
+        isOpen={deleteTargetId !== null}
+        onClose={() => setDeleteTargetId(null)}
+        onConfirm={handleDelete}
+        message="Tem certeza que deseja excluir este ganho?"
+        isLoading={isDeleting}
+      />
+    </div>
+  );
 }
 
 export default Earning;

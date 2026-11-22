@@ -1,24 +1,15 @@
+import type { Expense } from '@cointrack/types';
+import { parseYearMonth } from '@cointrack/utils';
 import { useCRUD } from './useCRUD';
-import { apiClient } from '../services/api';
-
-interface Expense {
-  id: string;
-  description: string;
-  frequency: string;
-  amount: number;
-  estimated_amount: number;
-  due_date: string;
-  payment_date: string;
-  payment_type_id: string;
-  credit_card_id: string;
-  active: boolean;
-  paid: boolean;
-}
+import { expenseService } from '../services/api';
 
 export function useExpenses(month: string) {
   return useCRUD<Expense>({
-    fetchFn: () => apiClient.get(`/v1/expenses?month=${month}`).then((r) => r.data),
-    deleteFn: (id) => apiClient.delete(`/v1/expenses/${id}`),
+    fetchFn: () => {
+      const [year, m] = parseYearMonth(month);
+      return expenseService.getAll(year, m);
+    },
+    deleteFn: (id) => expenseService.delete(id),
     deps: [month],
   });
 }

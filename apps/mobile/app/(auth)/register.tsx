@@ -11,11 +11,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { decodeJwtPayload, extractErrorMessage } from '@cointrack/utils';
 import { FormInput } from '../../components/FormInput';
 import { validateRegisterForm, type FieldErrors } from '../../utils/validation';
-import { extractErrorMessage } from '../../utils/errorMessage';
 import { authService } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
+import { theme } from '../../constants/theme';
 
 export default function RegisterScreen() {
     const [name, setName] = useState('');
@@ -59,19 +60,13 @@ export default function RegisterScreen() {
                 throw new Error('Token não recebido do servidor');
             }
 
-            // Decode JWT to extract user data
-            const tokenParts = token.split('.');
-            if (tokenParts.length === 3) {
-                const payload = JSON.parse(atob(tokenParts[1]));
-                const userData = {
-                    id: payload.user_id || payload.sub || '',
-                    name: payload.name || name,
-                    email: payload.email || email,
-                };
-                await login(token, userData);
-            } else {
-                throw new Error('Formato de token inválido');
-            }
+            const payload = decodeJwtPayload(token);
+            const userData = {
+                id: payload.user_id || payload.sub || '',
+                name: payload.name || name,
+                email: payload.email || email,
+            };
+            await login(token, userData);
         } catch (err) {
             const message = extractErrorMessage(err, 'Erro ao criar conta. Tente novamente.');
             setApiError(message);
@@ -169,7 +164,7 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
     flex: {
         flex: 1,
-        backgroundColor: '#F9FAFB',
+        backgroundColor: theme.colors.background,
     },
     scrollContent: {
         flexGrow: 1,
@@ -182,29 +177,29 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 28,
         fontWeight: '700',
-        color: '#1A1A1A',
+        color: theme.colors.primaryDark,
         marginBottom: 8,
     },
     subtitle: {
         fontSize: 15,
-        color: '#666',
+        color: theme.colors.muted,
         marginBottom: 24,
     },
     errorBanner: {
-        backgroundColor: '#FEE2E2',
+        backgroundColor: theme.colors.dangerLight,
         borderWidth: 1,
         borderColor: '#FECACA',
-        borderRadius: 8,
+        borderRadius: theme.radius.md,
         padding: 12,
         marginBottom: 16,
     },
     errorBannerText: {
-        color: '#DC2626',
+        color: theme.colors.danger,
         fontSize: 14,
     },
     submitButton: {
-        backgroundColor: '#2563EB',
-        borderRadius: 8,
+        backgroundColor: theme.colors.primary,
+        borderRadius: theme.radius.md,
         paddingVertical: 14,
         alignItems: 'center',
         marginTop: 8,
@@ -213,7 +208,7 @@ const styles = StyleSheet.create({
         opacity: 0.6,
     },
     submitButtonText: {
-        color: '#FFF',
+        color: theme.colors.surface,
         fontSize: 16,
         fontWeight: '600',
     },
@@ -223,10 +218,10 @@ const styles = StyleSheet.create({
     },
     loginLinkText: {
         fontSize: 14,
-        color: '#666',
+        color: theme.colors.muted,
     },
     loginLinkBold: {
-        color: '#2563EB',
+        color: theme.colors.accent,
         fontWeight: '600',
     },
 });

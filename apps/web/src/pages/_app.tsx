@@ -3,6 +3,7 @@ import "@/styles/globals.css";
 import type { AppProps } from "next/app";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { FamilyProvider } from "@/contexts/FamilyContext";
+import { ToastProvider } from "@/contexts/ToastContext";
 import React from "react";
 
 class ErrorBoundary extends React.Component<
@@ -25,16 +26,19 @@ class ErrorBoundary extends React.Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex items-center justify-center p-4">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-red-600 mb-4">Algo deu errado</h1>
-            <p className="text-gray-600 mb-4">{this.state.error?.message}</p>
+        <div className="min-h-screen flex items-center justify-center p-6 bg-background">
+          <div className="max-w-md w-full bg-card border border-border rounded-2xl p-8 text-center shadow-[var(--shadow-sm)]">
+            <h1 className="text-xl font-bold text-danger mb-2">Algo deu errado</h1>
+            <p className="text-sm text-muted mb-6">
+              {this.state.error?.message || "Ocorreu um erro inesperado na interface."}
+            </p>
             <button
+              type="button"
               onClick={() => {
                 this.setState({ hasError: false, error: null });
                 window.location.reload();
               }}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              className="px-5 py-2.5 bg-primary text-white text-sm font-medium rounded-xl hover:bg-primary-hover transition-colors cursor-pointer"
             >
               Recarregar página
             </button>
@@ -47,14 +51,15 @@ class ErrorBoundary extends React.Component<
 }
 
 export default function App({ Component, pageProps }: AppProps) {
-
   return (
     <ErrorBoundary>
       <AuthProvider>
         <FamilyProvider>
-          <Layout>
-            <Component {...pageProps} />
-          </Layout>
+          <ToastProvider>
+            <Layout>
+              <Component {...pageProps} />
+            </Layout>
+          </ToastProvider>
         </FamilyProvider>
       </AuthProvider>
     </ErrorBoundary>

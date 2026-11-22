@@ -21,6 +21,8 @@ export const FamilyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
     const loadFamilies = useCallback(async () => {
         if (!user?.id) {
+            setFamilies([]);
+            setSelectedFamilyState(null);
             setIsLoading(false);
             return;
         }

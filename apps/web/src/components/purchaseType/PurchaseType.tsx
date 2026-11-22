@@ -1,171 +1,200 @@
 import { useEffect, useState, useCallback } from "react";
 import ModalPurchaseType from "./ModalPurchaseType";
-import { deletePurchaseType, getPurchaseTypes, type PurchaseTypesResponse } from "@/services/purchaseType";
-import { Pencil, Trash2, Plus, Tag, AlertCircle, X } from 'lucide-react';
-import axios from "axios";
+import {
+  deletePurchaseType,
+  getPurchaseTypes,
+  type PurchaseTypesResponse,
+} from "@/services/purchaseType";
+import { extractErrorMessage } from "@cointrack/utils";
+import { useToast } from "@/contexts/ToastContext";
+import { Pencil, Trash2, Plus, Tag } from "lucide-react";
+import {
+  Alert,
+  Button,
+  Card,
+  ConfirmDialog,
+  EmptyState,
+  IconButton,
+  PageHeader,
+  TableSkeleton,
+} from "@/components/ui";
 
 function PurchaseType() {
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [purchaseTypes, setPurchaseTypes] = useState<PurchaseTypesResponse>({
-        message: [],
-        statusCode: 0
-    });
-    const [error, setError] = useState<string | null>(null);
-    const [isUpdate, setIsUpdate] = useState<boolean>(false);
-    const [purchaseTypeId, setPurchaseTypeId] = useState<string>("");
-    const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const toast = useToast();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [purchaseTypes, setPurchaseTypes] = useState<PurchaseTypesResponse>({
+    message: [],
+    statusCode: 0,
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isUpdate, setIsUpdate] = useState<boolean>(false);
+  const [purchaseTypeId, setPurchaseTypeId] = useState<string>("");
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-    const openModal = () => setIsModalOpen(true);
-    const closeModal = () => setIsModalOpen(false);
+  const openModal = () => setIsModalOpen(true);
+  const closeModal = () => setIsModalOpen(false);
 
-    const fetchData = useCallback(async () => {
-        try {
-            const data = await getPurchaseTypes();
-            setPurchaseTypes(data);
-        } catch (err: unknown) {
-            const error = err as Error;
-            setError(error.message || "Erro ao carregar dados");
-        }
-    }, []); 
-
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
-
-    const handlePurchaseType = async () => {
-        await fetchData();
-        closeModal();
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getPurchaseTypes();
+      setPurchaseTypes(data);
+    } catch (err) {
+      setError(extractErrorMessage(err, "Erro ao carregar tipos de compra."));
+    } finally {
+      setLoading(false);
     }
+  }, []);
 
-    const handleDelete = async (id: string) => {
-        if (!window.confirm('Tem certeza que deseja deletar este tipo de compra?')) {
-            return;
-        }
-    
-        setIsDeleting(id);
-        try {
-            await deletePurchaseType(id);
-            setPurchaseTypes(prev => ({
-                ...prev,
-                message: prev.message.filter(item => item.id !== id)
-            }));
-        } catch (err) {
-            if (axios.isAxiosError(err)) {
-                const apiMessage = err.response?.data?.message;
-                setError(apiMessage || "Ocorreu um erro inesperado.");
-            } else {
-                setError("Ocorreu um erro inesperado.");
-            }
-        } finally {
-            setIsDeleting(null);
-        }
-    } 
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
-    const handleOpenNew = () => {
-        setIsUpdate(false);
-        setPurchaseTypeId("");
-        openModal();
+  const handlePurchaseType = async () => {
+    await fetchData();
+    closeModal();
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTargetId) return;
+
+    setIsDeleting(true);
+    try {
+      await deletePurchaseType(deleteTargetId);
+      setPurchaseTypes((prev) => ({
+        ...prev,
+        message: prev.message.filter((item) => item.id !== deleteTargetId),
+      }));
+      setDeleteTargetId(null);
+      toast.success("Tipo de compra excluído com sucesso.");
+    } catch (err) {
+      toast.error(extractErrorMessage(err, "Erro ao excluir tipo de compra."));
+    } finally {
+      setIsDeleting(false);
     }
+  };
 
-    const isEmpty = !error && (!purchaseTypes?.message || purchaseTypes?.message?.length === 0);
+  const handleOpenNew = () => {
+    setIsUpdate(false);
+    setPurchaseTypeId("");
+    openModal();
+  };
 
-    return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold text-foreground">Tipo de Compra</h1>
-                    <p className="text-muted mt-1">Categorize suas compras por tipo</p>
-                </div>
-                <button 
-                    type="button" 
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary-hover focus:ring-4 focus:ring-primary/20 transition-all"
-                    onClick={handleOpenNew}
-                >
-                    <Plus className="w-4 h-4" />
-                    Novo Tipo
-                </button>
-            </div>
+  const list = Array.isArray(purchaseTypes?.message) ? purchaseTypes.message : [];
+  const isEmpty = !loading && !error && list.length === 0;
 
-            {/* Error Alert */}
-            {error && (
-                <div className="flex items-center gap-3 p-4 rounded-xl bg-danger-light border border-danger/20" role="alert">
-                    <AlertCircle className="w-5 h-5 text-danger flex-shrink-0" />
-                    <p className="text-sm text-danger flex-1">{error}</p>
-                    <button onClick={() => setError(null)} className="text-danger hover:text-danger/70 transition-colors">
-                        <X className="w-4 h-4" />
-                    </button>
-                </div>
-            )}
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Tipos de Compra"
+        subtitle="Categorize suas compras para análises mais precisas no dashboard"
+        actions={
+          <Button icon={<Plus className="w-4 h-4" />} onClick={handleOpenNew}>
+            Novo Tipo
+          </Button>
+        }
+      />
 
-            {/* Empty State */}
-            {isEmpty && (
-                <div className="bg-card rounded-2xl border border-border p-12 text-center">
-                    <div className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center mx-auto mb-4">
-                        <Tag className="w-8 h-8 text-muted" />
-                    </div>
-                    <h3 className="text-lg font-medium text-foreground mb-1">Nenhum tipo de compra cadastrado</h3>
-                    <p className="text-sm text-muted">Crie categorias para organizar suas compras.</p>
-                </div>
-            )}
+      {error && (
+        <Alert variant="error" message={error} onDismiss={() => setError(null)} />
+      )}
 
-            {/* Table */}
-            {!isEmpty && (
-                <div className="bg-card rounded-2xl border border-border overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="border-b border-border bg-secondary/50">
-                                    <th className="text-left px-6 py-4 font-semibold text-foreground">Nome</th>
-                                    <th className="text-right px-6 py-4 font-semibold text-foreground">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-border">
-                                {purchaseTypes?.message.map((message) => (
-                                    <tr key={message.id} className="hover:bg-secondary/30 transition-colors">
-                                        <td className="px-6 py-4 font-medium text-foreground">{message.name}</td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center justify-end gap-1">
-                                                <button 
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setPurchaseTypeId(message.id);
-                                                        setIsUpdate(true);
-                                                        openModal();
-                                                    }}
-                                                    className="p-2 rounded-lg text-muted hover:text-warning hover:bg-warning-light transition-colors"
-                                                    title="Editar Tipo de Compra"
-                                                >
-                                                    <Pencil size={16} />
-                                                </button>
-                                                <button 
-                                                    type="button" 
-                                                    onClick={() => handleDelete(message.id)}
-                                                    disabled={isDeleting === message.id}
-                                                    className="p-2 rounded-lg text-muted hover:text-danger hover:bg-danger-light transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                                    title="Deletar Tipo de Compra"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            )}
+      {loading && <TableSkeleton rows={5} columns={2} />}
 
-            <ModalPurchaseType 
-                isOpen={isModalOpen} 
-                onClose={closeModal}
-                onPurchaseTypeAction={handlePurchaseType}
-                isUpdate={isUpdate}
-                purchaseTypeId={isUpdate ? purchaseTypeId : ""}
-            />
-        </div>
-    )
+      {isEmpty && (
+        <EmptyState
+          icon={<Tag className="w-8 h-8" />}
+          title="Nenhum tipo de compra cadastrado"
+          description="Crie categorias como Alimentação, Transporte ou Lazer para organizar suas compras."
+          action={
+            <Button icon={<Plus className="w-4 h-4" />} onClick={handleOpenNew}>
+              Novo Tipo
+            </Button>
+          }
+        />
+      )}
+
+      {!isEmpty && !loading && !error && (
+        <Card padding="none" className="overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-background/80">
+                  <th className="text-left px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-muted">
+                    Nome
+                  </th>
+                  <th className="text-right px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-muted">
+                    Ações
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {list.map((item) => (
+                  <tr
+                    key={item.id}
+                    className="hover:bg-background/70 transition-colors"
+                  >
+                    <td className="px-6 py-4 font-medium text-foreground">
+                      <div className="flex items-center gap-2.5">
+                        <span className="w-2 h-2 rounded-full bg-accent" />
+                        {item.name}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-end gap-1">
+                        <IconButton
+                          tone="edit"
+                          onClick={() => {
+                            setPurchaseTypeId(item.id);
+                            setIsUpdate(true);
+                            openModal();
+                          }}
+                          title="Editar tipo de compra"
+                          aria-label="Editar tipo de compra"
+                        >
+                          <Pencil size={16} />
+                        </IconButton>
+                        <IconButton
+                          tone="delete"
+                          onClick={() => setDeleteTargetId(item.id)}
+                          title="Excluir tipo de compra"
+                          aria-label="Excluir tipo de compra"
+                        >
+                          <Trash2 size={16} />
+                        </IconButton>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+
+      <ModalPurchaseType
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        onPurchaseTypeAction={handlePurchaseType}
+        isUpdate={isUpdate}
+        purchaseTypeId={isUpdate ? purchaseTypeId : ""}
+      />
+
+      <ConfirmDialog
+        isOpen={Boolean(deleteTargetId)}
+        onClose={() => setDeleteTargetId(null)}
+        onConfirm={handleConfirmDelete}
+        title="Excluir tipo de compra"
+        description="Tem certeza que deseja excluir este tipo de compra?"
+        confirmLabel="Excluir"
+        tone="danger"
+        loading={isDeleting}
+      />
+    </div>
+  );
 }
 
 export default PurchaseType;
