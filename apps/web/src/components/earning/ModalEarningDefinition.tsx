@@ -3,6 +3,7 @@ import {
   createEarningDefinition,
   getEarningBy,
   updateEarning,
+  PERIODICITIES,
 } from '@/services/earning';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFamily } from '@/contexts/FamilyContext';
@@ -18,12 +19,6 @@ interface ModalProps {
   isUpdate: boolean;
   earningId: string;
 }
-
-const PERIODICITIES = [
-  { value: 'MENSAL', label: 'Mensal' },
-  { value: 'SEMESTRAL', label: 'Semestral' },
-  { value: 'ANUAL', label: 'Anual' },
-];
 
 const ModalEarningDefinition: React.FC<ModalProps> = ({
   isOpen,

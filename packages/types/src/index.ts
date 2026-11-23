@@ -157,6 +157,22 @@ export type ExpenseResponse = ApiResponse<Expense>;
 export type ExpensesResponse = ApiResponse<Expense[]>;
 
 // Earning types
+export type EarningPeriodicity = 'MENSAL' | 'SEMESTRAL' | 'ANUAL' | 'SPOT';
+
+export const PERIODICITIES: Array<{ value: EarningPeriodicity; label: string }> = [
+  { value: 'MENSAL', label: 'Mensal' },
+  { value: 'SEMESTRAL', label: 'Semestral' },
+  { value: 'ANUAL', label: 'Anual' },
+  { value: 'SPOT', label: 'Pontual' },
+];
+
+export const PERIODICITY_LABELS: Record<string, string> = {
+  MENSAL: 'Mensal',
+  SEMESTRAL: 'Semestral',
+  ANUAL: 'Anual',
+  SPOT: 'Pontual',
+};
+
 export interface EarningRecord {
   id: string;
   id_earning: string;

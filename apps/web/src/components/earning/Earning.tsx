@@ -4,6 +4,7 @@ import {
   getEarningsWithRecords,
   deleteEarning,
   EarningsResponse,
+  PERIODICITY_LABELS,
 } from "@/services/earning";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
@@ -267,7 +268,9 @@ function Earning() {
                       {earning.description}
                     </td>
                     <td className="px-6 py-4">
-                      <Badge variant="info">{earning.periodicity}</Badge>
+                      <Badge variant="info">
+                        {PERIODICITY_LABELS[earning.periodicity] || earning.periodicity}
+                      </Badge>
                     </td>
                     <td className="px-6 py-4 text-muted tabular-nums">
                       {formatDateBR(earning.record?.date)}

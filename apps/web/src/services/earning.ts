@@ -1,6 +1,11 @@
 import { earningService } from './api';
 
+export {
+  PERIODICITIES,
+  PERIODICITY_LABELS,
+} from '@cointrack/types';
 export type {
+  EarningPeriodicity,
   EarningRecord,
   Earning,
   EarningResponse,

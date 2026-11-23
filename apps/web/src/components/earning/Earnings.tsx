@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { getEarnings, deleteEarning, Earning } from "@/services/earning";
+import {
+  getEarnings,
+  deleteEarning,
+  Earning,
+  PERIODICITY_LABELS,
+} from "@/services/earning";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFamily } from "@/contexts/FamilyContext";
 import { useToast } from "@/contexts/ToastContext";
@@ -216,7 +221,9 @@ function Earnings() {
                       {earning.description}
                     </td>
                     <td className="px-6 py-4">
-                      <Badge variant="info">{earning.periodicity}</Badge>
+                      <Badge variant="info">
+                        {PERIODICITY_LABELS[earning.periodicity] || earning.periodicity}
+                      </Badge>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-1">
