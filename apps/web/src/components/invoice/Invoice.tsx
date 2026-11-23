@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/router";
 import {
   getInvoice,
   payInvoice,
@@ -14,8 +15,9 @@ import {
   parseYearMonth,
   extractErrorMessage,
 } from "@cointrack/utils";
+import { parseMonthFromQuery } from "@/utils/competence";
 import { useToast } from "@/contexts/ToastContext";
-import { FileText, Lock, CheckCircle2, CreditCard as CardIcon } from "lucide-react";
+import { FileText, Lock, CreditCard as CardIcon } from "lucide-react";
 import {
   Alert,
   Badge,
@@ -35,15 +37,27 @@ function mapInvoiceStatus(status: InvoiceStatus): "open" | "closed" | "paid" {
 }
 
 function Invoice() {
+  const router = useRouter();
   const toast = useToast();
   const [purchases, setPurchases] = useState<InvoicePurchase[]>([]);
   const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
   const [selectedCardId, setSelectedCardId] = useState<string>("");
-  const [currentMonth, setCurrentMonth] = useState(getCurrentMonth);
+  const [currentMonth, setCurrentMonth] = useState(() => parseMonthFromQuery(router.query) ?? getCurrentMonth());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [invoiceStatus, setInvoiceStatus] = useState<"open" | "closed" | "paid">("open");
   const [paying, setPaying] = useState(false);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    const fromQuery = parseMonthFromQuery({
+      month: router.query.month,
+      year: router.query.year,
+    });
+    if (fromQuery) {
+      setCurrentMonth(fromQuery);
+    }
+  }, [router.isReady, router.query.month, router.query.year]);
 
   const fetchCreditCards = useCallback(async () => {
     try {
@@ -153,17 +167,16 @@ function Invoice() {
             )}
             {invoiceStatus === "closed" && (
               <Button
-                variant="success"
-                loading={paying}
-                icon={<CheckCircle2 className="w-4 h-4" />}
+                variant="primary"
                 onClick={handlePay}
+                loading={paying}
+                icon={<Lock className="w-4 h-4" />}
               >
                 Pagar Fatura
               </Button>
             )}
             {invoiceStatus === "paid" && (
-              <Badge variant="success" className="px-3.5 py-2 text-xs">
-                <Lock className="w-3.5 h-3.5" />
+              <Badge variant="success" dot className="px-3.5 py-2 text-xs">
                 Fatura Paga
               </Badge>
             )}
@@ -171,21 +184,20 @@ function Invoice() {
         }
       />
 
-      {/* Filter & Summary Bar */}
-      <Card padding="sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+      <Card padding="md">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-1">
             <MonthNavigator value={currentMonth} onChange={setCurrentMonth} />
 
-            <div className="relative min-w-[220px]">
-              <CardIcon className="w-4 h-4 text-accent absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <div className="relative sm:w-72">
+              <CardIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
               <select
                 value={selectedCardId}
                 onChange={(e) => setSelectedCardId(e.target.value)}
+                className={`${inputBaseClasses} pl-9`}
                 aria-label="Selecionar cartão de crédito"
-                className={`${inputBaseClasses} pl-10`}
               >
-                <option value="">Todos os cartões</option>
+                <option value="">Selecione um cartão</option>
                 {creditCards.map((card) => (
                   <option key={card.id} value={card.id}>
                     {card.card_name || card.owner} — •••• {card.final_card_num}

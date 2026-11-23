@@ -5,6 +5,7 @@ import {
   getEarnings,
   updateEarning,
   Earning,
+  PERIODICITIES,
 } from '@/services/earning';
 import { Person } from '@/services/person';
 import { useFamily } from '@/contexts/FamilyContext';
@@ -311,9 +312,11 @@ const ModalEarning: React.FC<ModalProps> = ({
             disabled={isViewOnly}
             required
           >
-            <option value="MENSAL">Mensal</option>
-            <option value="SEMESTRAL">Semestral</option>
-            <option value="ANUAL">Anual</option>
+            {PERIODICITIES.map((p) => (
+              <option key={p.value} value={p.value}>
+                {p.label}
+              </option>
+            ))}
           </Select>
         )}
 

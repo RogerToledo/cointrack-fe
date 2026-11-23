@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { useRouter } from "next/router";
 import {
   getExpenses,
   deleteExpense,
@@ -13,6 +14,7 @@ import {
   parseYearMonth,
   extractErrorMessage,
 } from "@cointrack/utils";
+import { parseMonthFromQuery } from "@/utils/competence";
 import { useToast } from "@/contexts/ToastContext";
 import ModalExpense from "./ModalExpense";
 import ModalPayExpense from "./ModalPayExpense";
@@ -44,6 +46,7 @@ const CREDIT_CARD_LABEL = "cartão de crédito";
 type StatusFilter = "all" | "pending" | "paid";
 
 function Expense() {
+  const router = useRouter();
   const toast = useToast();
   const [expenses, setExpenses] = useState<ExpensesResponse>({
     message: [],
@@ -58,10 +61,21 @@ function Expense() {
   const [showRecreateModal, setShowRecreateModal] = useState<boolean>(false);
   const [isRecreating, setIsRecreating] = useState<boolean>(false);
   const [paidExpenseId, setPaidExpenseId] = useState<string>("");
-  const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonth);
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => parseMonthFromQuery(router.query) ?? getCurrentMonth());
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    const fromQuery = parseMonthFromQuery({
+      month: router.query.month,
+      year: router.query.year,
+    });
+    if (fromQuery) {
+      setSelectedMonth(fromQuery);
+    }
+  }, [router.isReady, router.query.month, router.query.year]);
 
   const openPayModal = (id: string) => {
     setExpenseId(id);
@@ -147,7 +161,11 @@ function Expense() {
       }
     }
 
-    return { totalEstimated, totalPaid, pendingCount };
+    return {
+      totalEstimated,
+      totalPaid,
+      pendingCount,
+    };
   }, [expenses, selectedMonth]);
 
   const handleExpense = async () => {
@@ -156,11 +174,15 @@ function Expense() {
   };
 
   const handlePay = async (id: string, amount: number, date: string) => {
-    await payExpense(id, amount, date);
-    setIsPayModalOpen(false);
-    await fetchData();
-    setPaidExpenseId(id);
-    setShowRecreateModal(true);
+    try {
+      await payExpense(id, amount, date);
+      setIsPayModalOpen(false);
+      fetchData();
+      setPaidExpenseId(id);
+      setShowRecreateModal(true);
+    } catch (err) {
+      throw err;
+    }
   };
 
   const handleRecreateConfirm = async () => {
@@ -192,10 +214,10 @@ function Expense() {
     try {
       await deleteExpense(deleteTargetId);
       setDeleteTargetId(null);
-      toast.success("Despesa excluída com sucesso.");
+      toast.success("Despesa excluída com sucesso!");
       await fetchData();
     } catch (err) {
-      toast.error(extractErrorMessage(err, "Erro ao deletar despesa."));
+      toast.error(extractErrorMessage(err, "Erro ao excluir despesa."));
     } finally {
       setIsDeleting(false);
     }
@@ -219,101 +241,126 @@ function Expense() {
     <div className="space-y-6">
       <PageHeader
         title="Despesas"
-        subtitle="Gerencie suas despesas fixas, variáveis e recorrências"
+        subtitle="Gerencie suas despesas fixas, variáveis e recorrentes"
         actions={
-          <Button icon={<Plus className="w-4 h-4" />} onClick={handleOpenNew}>
+          <Button
+            variant="primary"
+            icon={<Plus className="w-4 h-4" />}
+            onClick={handleOpenNew}
+          >
             Nova Despesa
           </Button>
         }
       />
 
-      {/* Summary KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card padding="sm" className="flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-primary-light flex items-center justify-center flex-shrink-0">
-            <Receipt className="w-5 h-5 text-primary" />
-          </div>
-          <div>
-            <p className="text-xs font-medium text-muted">Previsto no mês</p>
-            <p className="text-lg font-bold text-foreground tabular-nums">
-              {formatBRL(summary.totalEstimated)}
-            </p>
+        <Card padding="sm">
+          <p className="text-xs text-muted uppercase tracking-wide font-medium">
+            Previsto no mês
+          </p>
+          <p className="text-xl font-bold text-foreground tabular-nums mt-0.5">
+            {formatBRL(summary.totalEstimated)}
+          </p>
+        </Card>
+
+        <Card padding="sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted uppercase tracking-wide font-medium">
+                Total pago
+              </p>
+              <p className="text-xl font-bold text-emerald-600 tabular-nums mt-0.5">
+                {formatBRL(summary.totalPaid)}
+              </p>
+            </div>
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
           </div>
         </Card>
 
-        <Card padding="sm" className="flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-success-light flex items-center justify-center flex-shrink-0">
-            <CheckCircle2 className="w-5 h-5 text-success" />
-          </div>
-          <div>
-            <p className="text-xs font-medium text-muted">Total pago</p>
-            <p className="text-lg font-bold text-success tabular-nums">
-              {formatBRL(summary.totalPaid)}
-            </p>
-          </div>
-        </Card>
-
-        <Card padding="sm" className="flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-accent-light flex items-center justify-center flex-shrink-0">
-            <Clock className="w-5 h-5 text-accent" />
-          </div>
-          <div>
-            <p className="text-xs font-medium text-muted">Em aberto</p>
-            <p className="text-lg font-bold text-foreground tabular-nums">
-              {summary.pendingCount}{" "}
-              <span className="text-xs font-medium text-muted">
-                {summary.pendingCount === 1 ? "despesa" : "despesas"}
-              </span>
-            </p>
+        <Card padding="sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted uppercase tracking-wide font-medium">
+                Pendentes
+              </p>
+              <p className="text-xl font-bold text-amber-600 tabular-nums mt-0.5">
+                {summary.pendingCount}
+              </p>
+            </div>
+            <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+              <Clock className="w-5 h-5" />
+            </div>
           </div>
         </Card>
       </div>
 
-      {/* Filters + Month Navigator */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="inline-flex items-center p-1 rounded-xl bg-card border border-border w-fit">
-          {(
-            [
-              { id: "all", label: "Todas" },
-              { id: "pending", label: "Pendentes" },
-              { id: "paid", label: "Pagas" },
-            ] as const
-          ).map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setStatusFilter(tab.id)}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors ${
-                statusFilter === tab.id
-                  ? "bg-primary text-white shadow-xs"
-                  : "text-muted hover:text-foreground"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="inline-flex p-1 rounded-xl bg-slate-100 border border-border">
+          <button
+            type="button"
+            onClick={() => setStatusFilter("all")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              statusFilter === "all"
+                ? "bg-white text-foreground shadow-xs font-semibold"
+                : "text-muted hover:text-foreground"
+            }`}
+          >
+            Todas
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusFilter("pending")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              statusFilter === "pending"
+                ? "bg-white text-amber-700 shadow-xs font-semibold"
+                : "text-muted hover:text-foreground"
+            }`}
+          >
+            Pendentes
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusFilter("paid")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              statusFilter === "paid"
+                ? "bg-white text-emerald-700 shadow-xs font-semibold"
+                : "text-muted hover:text-foreground"
+            }`}
+          >
+            Pagas
+          </button>
         </div>
 
-        <MonthNavigator
-          value={selectedMonth}
-          onChange={setSelectedMonth}
-          disableFuture
-        />
+        <MonthNavigator value={selectedMonth} onChange={setSelectedMonth} />
       </div>
 
       {error && (
-        <Alert variant="error" message={error} onDismiss={() => setError(null)} />
+        <Alert
+          variant="error"
+          message={error}
+          onDismiss={() => setError(null)}
+        />
       )}
 
       {loading && <TableSkeleton rows={5} columns={7} />}
 
       {isEmpty && (
         <EmptyState
-          icon={<Receipt className="w-8 h-8" />}
-          title="Nenhuma despesa encontrada"
-          description="Ajuste o filtro, navegue para outro mês ou cadastre uma nova despesa."
+          icon={<Receipt className="w-8 h-8 text-muted" />}
+          title="Nenhuma despesa neste mês"
+          description={
+            statusFilter !== "all"
+              ? "Não encontramos despesas para o filtro selecionado."
+              : "Ajuste o mês ou adicione uma nova despesa para acompanhar seus compromissos."
+          }
           action={
-            <Button icon={<Plus className="w-4 h-4" />} onClick={handleOpenNew}>
+            <Button
+              variant="primary"
+              icon={<Plus className="w-4 h-4" />}
+              onClick={handleOpenNew}
+            >
               Nova Despesa
             </Button>
           }
@@ -321,30 +368,30 @@ function Expense() {
       )}
 
       {!isEmpty && !loading && !error && (
-        <Card padding="none" className="overflow-hidden">
+        <Card padding="none">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border bg-background/80">
-                  <th className="text-left px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-muted">
+                <tr className="border-b border-border bg-slate-50/50">
+                  <th className="text-left px-6 py-4 font-semibold text-foreground text-xs uppercase tracking-wider">
                     Descrição
                   </th>
-                  <th className="text-left px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-muted">
-                    Pagamento
+                  <th className="text-left px-6 py-4 font-semibold text-foreground text-xs uppercase tracking-wider">
+                    Tipo de Pagamento
                   </th>
-                  <th className="text-right px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-muted">
-                    Estimado
+                  <th className="text-right px-6 py-4 font-semibold text-foreground text-xs uppercase tracking-wider">
+                    Valor estimado
                   </th>
-                  <th className="text-right px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-muted">
-                    Valor Pago
+                  <th className="text-right px-6 py-4 font-semibold text-foreground text-xs uppercase tracking-wider">
+                    Valor
                   </th>
-                  <th className="text-left px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-muted">
+                  <th className="text-left px-6 py-4 font-semibold text-foreground text-xs uppercase tracking-wider">
                     Vencimento
                   </th>
-                  <th className="text-left px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-muted">
+                  <th className="text-left px-6 py-4 font-semibold text-foreground text-xs uppercase tracking-wider">
                     Frequência
                   </th>
-                  <th className="text-right px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-muted">
+                  <th className="text-right px-6 py-4 font-semibold text-foreground text-xs uppercase tracking-wider">
                     Ações
                   </th>
                 </tr>
@@ -355,7 +402,7 @@ function Expense() {
                   return (
                     <tr
                       key={expense.id}
-                      className="hover:bg-background/70 transition-colors"
+                      className="hover:bg-slate-50/60 transition-colors"
                     >
                       <td className="px-6 py-4 font-medium text-foreground">
                         {expense.description}
