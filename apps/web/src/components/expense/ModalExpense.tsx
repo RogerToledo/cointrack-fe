@@ -272,7 +272,7 @@ const ModalExpense: React.FC<ModalProps> = ({
             onChange={(e) => setFrequency(e.target.value)}
             disabled={isViewOnly}
           >
-            <option value="">Única / Nenhuma</option>
+            <option value="spot">Única</option>
             <option value="monthly">Mensal</option>
             <option value="yearly">Anual</option>
           </Select>
