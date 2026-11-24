@@ -439,6 +439,8 @@ function Expense() {
                               ? "Mensal"
                               : expense.frequency === "yearly"
                               ? "Anual"
+                              : expense.frequency === "spot"
+                              ? "Única"
                               : expense.frequency}
                           </Badge>
                         ) : (
