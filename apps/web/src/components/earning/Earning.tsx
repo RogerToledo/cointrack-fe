@@ -221,7 +221,7 @@ function Earning() {
               <tbody className="divide-y divide-border">
                 {list.map((earning) => (
                   <tr
-                    key={earning.id}
+                    key={earning.record?.id || earning.id}
                     className="hover:bg-background/70 transition-colors"
                   >
                     <td className="px-6 py-4 font-medium text-foreground">
