@@ -115,15 +115,8 @@ function Earning() {
     [earnings?.message]
   );
 
-  const totals = useMemo(() => {
-    return list.reduce(
-      (acc, item) => ({
-        gross: acc.gross + (item.record?.gross_pay ?? 0),
-        net: acc.net + (item.record?.net_pay ?? 0),
-        deduction: acc.deduction + (item.record?.deduction ?? 0),
-      }),
-      { gross: 0, net: 0, deduction: 0 }
-    );
+  const totalValue = useMemo(() => {
+    return list.reduce((acc, item) => acc + (item.record?.value ?? 0), 0);
   }, [list]);
 
   const isEmpty = !loading && !error && list.length === 0;
@@ -171,33 +164,9 @@ function Earning() {
             <TrendingUp className="w-5 h-5 text-success" />
           </div>
           <div>
-            <p className="text-xs font-medium text-muted">Total Líquido</p>
+            <p className="text-xs font-medium text-muted">Total</p>
             <p className="text-lg font-bold text-success tabular-nums">
-              {formatBRL(totals.net)}
-            </p>
-          </div>
-        </Card>
-
-        <Card padding="sm" className="flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-primary-light flex items-center justify-center flex-shrink-0">
-            <CircleDollarSign className="w-5 h-5 text-primary" />
-          </div>
-          <div>
-            <p className="text-xs font-medium text-muted">Total Bruto</p>
-            <p className="text-lg font-bold text-foreground tabular-nums">
-              {formatBRL(totals.gross)}
-            </p>
-          </div>
-        </Card>
-
-        <Card padding="sm" className="flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-accent-light flex items-center justify-center flex-shrink-0">
-            <CircleDollarSign className="w-5 h-5 text-accent" />
-          </div>
-          <div>
-            <p className="text-xs font-medium text-muted">Deduções</p>
-            <p className="text-lg font-bold text-foreground tabular-nums">
-              {formatBRL(totals.deduction)}
+              {formatBRL(totalValue)}
             </p>
           </div>
         </Card>
@@ -207,7 +176,7 @@ function Earning() {
         <Alert variant="error" message={error} onDismiss={() => setError(null)} />
       )}
 
-      {loading && <TableSkeleton rows={5} columns={8} />}
+      {loading && <TableSkeleton rows={5} columns={6} />}
 
       {isEmpty && (
         <EmptyState
@@ -242,13 +211,7 @@ function Earning() {
                     Data
                   </th>
                   <th className="text-right px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-muted">
-                    Bruto
-                  </th>
-                  <th className="text-right px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-muted">
-                    Líquido
-                  </th>
-                  <th className="text-right px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-muted">
-                    Dedução
+                    Valor
                   </th>
                   <th className="text-right px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-muted">
                     Ações
@@ -275,14 +238,8 @@ function Earning() {
                     <td className="px-6 py-4 text-muted tabular-nums">
                       {formatDateBR(earning.record?.date)}
                     </td>
-                    <td className="px-6 py-4 text-right font-medium text-foreground tabular-nums">
-                      {formatBRL(earning.record?.gross_pay)}
-                    </td>
                     <td className="px-6 py-4 text-right font-semibold text-success tabular-nums">
-                      {formatBRL(earning.record?.net_pay)}
-                    </td>
-                    <td className="px-6 py-4 text-right text-muted tabular-nums">
-                      {formatBRL(earning.record?.deduction)}
+                      {formatBRL(earning.record?.value)}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-1">

@@ -177,9 +177,7 @@ export interface EarningRecord {
   id: string;
   id_earning: string;
   date: string;
-  gross_pay: number;
-  net_pay: number;
-  deduction: number;
+  value: number;
 }
 
 export interface Earning {
@@ -205,8 +203,7 @@ export type EarningDefinitionPayload = EarningPayload;
 export interface EarningRecordPayload {
   id_earning: string;
   date: string;
-  gross_pay: number;
-  net_pay: number;
+  value: number;
 }
 
 // Investment types

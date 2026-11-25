@@ -38,8 +38,7 @@ const ModalEarning: React.FC<ModalProps> = ({
   const toast = useToast();
   const [earningOwner, setEarningOwner] = useState('');
   const [description, setDescription] = useState('');
-  const [grossPay, setGrossPay] = useState('');
-  const [netPay, setNetPay] = useState('');
+  const [value, setValue] = useState('');
   const [date, setDate] = useState('');
   const [periodicity, setPeriodicity] = useState('MENSAL');
   const [ownerList, setOwnerList] = useState<Person[]>([]);
@@ -105,14 +104,12 @@ const ModalEarning: React.FC<ModalProps> = ({
 
           setEarningOwner(ownerId);
           setDescription(earningData.description);
-          setGrossPay(earningData.record?.gross_pay?.toString() || '');
-          setNetPay(earningData.record?.net_pay?.toString() || '');
+          setValue(earningData.record?.value?.toString() || '');
           setDate(dateFormatted);
           setPeriodicity(earningData.periodicity || 'MENSAL');
         } else {
           setDescription('');
-          setGrossPay('');
-          setNetPay('');
+          setValue('');
           setDate('');
           setPeriodicity('MENSAL');
           setSelectedEarningId('');
@@ -157,18 +154,16 @@ const ModalEarning: React.FC<ModalProps> = ({
           return;
         }
 
-        const grossPayNumber = toNumber(grossPay);
-        const netPayNumber = toNumber(netPay);
-        if (isNaN(grossPayNumber) || isNaN(netPayNumber)) {
-          setError('Por favor, preencha o bruto e o líquido com valores válidos.');
+        const valueNumber = toNumber(value);
+        if (isNaN(valueNumber)) {
+          setError('Por favor, preencha o valor com um número válido.');
           return;
         }
 
         await createEarningRecord({
           id_earning: selectedEarningId,
           date,
-          gross_pay: grossPayNumber,
-          net_pay: netPayNumber,
+          value: valueNumber,
         });
         toast.success('Registro de ganho criado com sucesso!');
       } else {
@@ -195,8 +190,7 @@ const ModalEarning: React.FC<ModalProps> = ({
     setSelectedEarningId('');
     setDescription('');
     setPeriodicity('MENSAL');
-    setGrossPay('');
-    setNetPay('');
+    setValue('');
     await loadDescriptions(id);
   };
 
@@ -272,26 +266,15 @@ const ModalEarning: React.FC<ModalProps> = ({
           />
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input
-            id="earning-gross"
-            label="Valor Bruto (R$)"
-            value={grossPay}
-            onChange={(e) => setGrossPay(e.target.value)}
-            disabled={!recordEditable}
-            placeholder="0,00"
-            required
-          />
-          <Input
-            id="earning-net"
-            label="Valor Líquido (R$)"
-            value={netPay}
-            onChange={(e) => setNetPay(e.target.value)}
-            disabled={!recordEditable}
-            placeholder="0,00"
-            required
-          />
-        </div>
+        <Input
+          id="earning-value"
+          label="Valor (R$)"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          disabled={!recordEditable}
+          placeholder="0,00"
+          required
+        />
 
         <Input
           id="earning-date"
