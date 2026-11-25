@@ -30,7 +30,7 @@ const ModalExpense: React.FC<ModalProps> = ({
   const [description, setDescription] = useState<string>('');
   const [amount, setAmount] = useState<string>('');
   const [estimatedAmount, setEstimatedAmount] = useState<string>('');
-  const [frequency, setFrequency] = useState<string>('');
+  const [frequency, setFrequency] = useState<string>('spot');
   const [dueDate, setDueDate] = useState<string>('');
   const [paymentDate, setPaymentDate] = useState<string>('');
   const [active, setActive] = useState<boolean>(true);
@@ -75,7 +75,7 @@ const ModalExpense: React.FC<ModalProps> = ({
           setDescription(expenseData.description || '');
           setAmount(expenseData.amount?.toString() || '');
           setEstimatedAmount(expenseData.estimated_amount?.toString() || '');
-          setFrequency(expenseData.frequency || '');
+          setFrequency(expenseData.frequency || 'spot');
           setDueDate(expenseData.due_date ? expenseData.due_date.split('T')[0] : '');
           setPaymentDate(
             expenseData.payment_date ? expenseData.payment_date.split('T')[0] : ''
@@ -88,7 +88,7 @@ const ModalExpense: React.FC<ModalProps> = ({
           setDescription('');
           setAmount('');
           setEstimatedAmount('');
-          setFrequency('');
+          setFrequency('spot');
           setDueDate('');
           setPaymentDate('');
           setSelectedPaymentType('');
