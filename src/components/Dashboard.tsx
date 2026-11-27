@@ -11,6 +11,7 @@ import {
   TrendingUp,
   TrendingDown,
   Wallet,
+  PiggyBank,
   PieChart,
   Tag,
 } from 'lucide-react';
@@ -303,7 +304,11 @@ function Dashboard() {
 
   const totalIncome = summary?.overview?.total_income ?? 0;
   const availableBalance = summary?.overview?.available_balance ?? (totalIncome - totalExpenses);
+  const previousBalance = summary?.overview?.previous_balance ?? 0;
+  const accumulatedAvailableBalance =
+    summary?.overview?.accumulated_available_balance ?? (previousBalance + availableBalance);
   const isPositiveBalance = availableBalance >= 0;
+  const isPositiveAccumulated = accumulatedAvailableBalance >= 0;
 
   const rawAvailablePct = summary?.overview?.available_percentage ??
     (totalIncome > 0 ? (availableBalance / totalIncome) * 100 : 0);
@@ -418,8 +423,8 @@ function Dashboard() {
         />
       )}
 
-      {/* 3 Main KPI Cards: Ganhos, Despesas Totais e Saldo Disponível */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* 4 Main KPI Cards: Ganhos, Despesas Totais, Saldo Disponível e Disponível Acumulado */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
           title="Total de Ganhos"
           value={formatBRL(totalIncome)}
@@ -451,7 +456,28 @@ function Dashboard() {
               </Badge>
             ) : undefined
           }
-          subtitle={totalIncome > 0 ? 'Economia prevista' : undefined}
+          subtitle={totalIncome > 0 ? 'Economia do mês' : undefined}
+        />
+
+        <KpiCard
+          title="Disponível Acumulado"
+          value={formatBRL(accumulatedAvailableBalance)}
+          valueClass={isPositiveAccumulated ? 'text-success' : 'text-danger'}
+          icon={<PiggyBank className="w-5 h-5 text-success" />}
+          iconBg="bg-success-light"
+          badge={
+            previousBalance !== 0 ? (
+              <Badge variant={previousBalance > 0 ? 'success' : 'warning'}>
+                {previousBalance > 0 ? '+' : ''}
+                {formatBRL(previousBalance)} ant.
+              </Badge>
+            ) : undefined
+          }
+          subtitle={
+            previousBalance !== 0
+              ? `Saldo anterior: ${formatBRL(previousBalance)}`
+              : 'Acumulado com meses anteriores'
+          }
         />
       </div>
 

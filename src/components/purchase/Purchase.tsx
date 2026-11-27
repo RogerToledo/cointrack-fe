@@ -18,6 +18,9 @@ import {
   Plus,
   ShoppingCart,
   Search,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
 } from "lucide-react";
 import { useToast } from "@/contexts/ToastContext";
 import {
@@ -50,6 +53,8 @@ function Purchase() {
   const [selectedPurchaseIsCreditCard, setSelectedPurchaseIsCreditCard] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(() => parseMonthFromQuery(router.query) ?? getCurrentMonth());
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<"date" | "amount">("date");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
@@ -79,7 +84,7 @@ function Purchase() {
       setError(null);
 
       try {
-        const data = await getPurchases(currentMonth, targetPage, 20);
+        const data = await getPurchases(currentMonth, targetPage, 20, sortBy, sortOrder);
         const msg = data?.message;
         if (msg && typeof msg === "object" && !Array.isArray(msg) && "responses" in msg) {
           setPurchases(msg.responses);
@@ -102,8 +107,17 @@ function Purchase() {
         setLoading(false);
       }
     },
-    [currentMonth]
+    [currentMonth, sortBy, sortOrder]
   );
+
+  const handleSort = (field: "date" | "amount") => {
+    if (sortBy === field) {
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(field);
+      setSortOrder(field === "amount" ? "desc" : "asc");
+    }
+  };
 
   useEffect(() => {
     setPage(1);
@@ -207,7 +221,7 @@ function Purchase() {
           </div>
         </Card>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="relative flex-1 sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
             <input
@@ -217,6 +231,49 @@ function Purchase() {
               placeholder="Buscar compra..."
               className="w-full pl-9 pr-3 py-2 rounded-xl border border-border bg-card text-foreground placeholder:text-muted text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
             />
+          </div>
+
+          <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-slate-100 border border-border">
+            <button
+              type="button"
+              onClick={() => handleSort("date")}
+              className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                sortBy === "date"
+                  ? "bg-white text-foreground shadow-xs font-semibold"
+                  : "text-muted hover:text-foreground"
+              }`}
+            >
+              Data
+              {sortBy === "date" ? (
+                sortOrder === "asc" ? (
+                  <ArrowUp className="w-3.5 h-3.5" />
+                ) : (
+                  <ArrowDown className="w-3.5 h-3.5" />
+                )
+              ) : (
+                <ArrowUpDown className="w-3.5 h-3.5 opacity-50" />
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSort("amount")}
+              className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                sortBy === "amount"
+                  ? "bg-white text-foreground shadow-xs font-semibold"
+                  : "text-muted hover:text-foreground"
+              }`}
+            >
+              Valor
+              {sortBy === "amount" ? (
+                sortOrder === "asc" ? (
+                  <ArrowUp className="w-3.5 h-3.5" />
+                ) : (
+                  <ArrowDown className="w-3.5 h-3.5" />
+                )
+              ) : (
+                <ArrowUpDown className="w-3.5 h-3.5 opacity-50" />
+              )}
+            </button>
           </div>
 
           <MonthNavigator value={currentMonth} onChange={setCurrentMonth} />
@@ -276,10 +333,40 @@ function Purchase() {
                     Local
                   </th>
                   <th className="text-right px-6 py-4 font-semibold text-foreground text-xs uppercase tracking-wider">
-                    Valor
+                    <button
+                      type="button"
+                      onClick={() => handleSort("amount")}
+                      className="inline-flex items-center gap-1 hover:text-primary transition-colors ml-auto"
+                    >
+                      Valor
+                      {sortBy === "amount" ? (
+                        sortOrder === "asc" ? (
+                          <ArrowUp className="w-3.5 h-3.5" />
+                        ) : (
+                          <ArrowDown className="w-3.5 h-3.5" />
+                        )
+                      ) : (
+                        <ArrowUpDown className="w-3.5 h-3.5 opacity-40" />
+                      )}
+                    </button>
                   </th>
                   <th className="text-left px-6 py-4 font-semibold text-foreground text-xs uppercase tracking-wider">
-                    Data
+                    <button
+                      type="button"
+                      onClick={() => handleSort("date")}
+                      className="inline-flex items-center gap-1 hover:text-primary transition-colors"
+                    >
+                      Data
+                      {sortBy === "date" ? (
+                        sortOrder === "asc" ? (
+                          <ArrowUp className="w-3.5 h-3.5" />
+                        ) : (
+                          <ArrowDown className="w-3.5 h-3.5" />
+                        )
+                      ) : (
+                        <ArrowUpDown className="w-3.5 h-3.5 opacity-40" />
+                      )}
+                    </button>
                   </th>
                   <th className="text-left px-6 py-4 font-semibold text-foreground text-xs uppercase tracking-wider">
                     Parcelas

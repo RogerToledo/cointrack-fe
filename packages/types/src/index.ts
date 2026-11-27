@@ -31,7 +31,12 @@ export interface DashboardOverview {
   total_expenses: number;
   available_balance: number;
   available_percentage: number;
+  previous_balance?: number;
+  accumulated_available_balance?: number;
 }
+
+export type SortField = 'date' | 'amount';
+export type SortOrder = 'asc' | 'desc';
 
 export interface DashboardInstallments {
   active_purchases_count: number;

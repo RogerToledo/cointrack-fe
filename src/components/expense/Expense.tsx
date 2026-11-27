@@ -27,6 +27,9 @@ import {
   Receipt,
   CheckCircle2,
   Clock,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
 } from "lucide-react";
 import {
   Alert,
@@ -63,6 +66,8 @@ function Expense() {
   const [paidExpenseId, setPaidExpenseId] = useState<string>("");
   const [selectedMonth, setSelectedMonth] = useState<string>(() => parseMonthFromQuery(router.query) ?? getCurrentMonth());
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [sortBy, setSortBy] = useState<"date" | "amount">("date");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
 
@@ -119,11 +124,20 @@ function Expense() {
     return expense.payment_type?.toLowerCase().includes(CREDIT_CARD_LABEL) ?? false;
   };
 
+  const handleSort = (field: "date" | "amount") => {
+    if (sortBy === field) {
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(field);
+      setSortOrder(field === "amount" ? "desc" : "asc");
+    }
+  };
+
   const visibleExpenses = useMemo(() => {
     const [year, month] = parseYearMonth(selectedMonth);
     const list = Array.isArray(expenses?.message) ? expenses.message : [];
 
-    return list.filter((expense) => {
+    const filtered = list.filter((expense) => {
       if (year !== undefined && month !== undefined) {
         if (!expense.due_date) return false;
         const due = new Date(expense.due_date);
@@ -135,7 +149,19 @@ function Expense() {
       if (statusFilter === "pending") return !isExpensePaid(expense);
       return true;
     });
-  }, [expenses, selectedMonth, statusFilter]);
+
+    return [...filtered].sort((a, b) => {
+      const dir = sortOrder === "asc" ? 1 : -1;
+      if (sortBy === "amount") {
+        const aVal = a.amount > 0 ? a.amount : a.estimated_amount;
+        const bVal = b.amount > 0 ? b.amount : b.estimated_amount;
+        return (aVal - bVal) * dir;
+      }
+      const aDate = a.due_date ? new Date(a.due_date).getTime() : 0;
+      const bDate = b.due_date ? new Date(b.due_date).getTime() : 0;
+      return (aDate - bDate) * dir;
+    });
+  }, [expenses, selectedMonth, statusFilter, sortBy, sortOrder]);
 
   const summary = useMemo(() => {
     const [year, month] = parseYearMonth(selectedMonth);
@@ -333,7 +359,52 @@ function Expense() {
           </button>
         </div>
 
-        <MonthNavigator value={selectedMonth} onChange={setSelectedMonth} />
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-slate-100 border border-border">
+            <button
+              type="button"
+              onClick={() => handleSort("date")}
+              className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                sortBy === "date"
+                  ? "bg-white text-foreground shadow-xs font-semibold"
+                  : "text-muted hover:text-foreground"
+              }`}
+            >
+              Data
+              {sortBy === "date" ? (
+                sortOrder === "asc" ? (
+                  <ArrowUp className="w-3.5 h-3.5" />
+                ) : (
+                  <ArrowDown className="w-3.5 h-3.5" />
+                )
+              ) : (
+                <ArrowUpDown className="w-3.5 h-3.5 opacity-50" />
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSort("amount")}
+              className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                sortBy === "amount"
+                  ? "bg-white text-foreground shadow-xs font-semibold"
+                  : "text-muted hover:text-foreground"
+              }`}
+            >
+              Valor
+              {sortBy === "amount" ? (
+                sortOrder === "asc" ? (
+                  <ArrowUp className="w-3.5 h-3.5" />
+                ) : (
+                  <ArrowDown className="w-3.5 h-3.5" />
+                )
+              ) : (
+                <ArrowUpDown className="w-3.5 h-3.5 opacity-50" />
+              )}
+            </button>
+          </div>
+
+          <MonthNavigator value={selectedMonth} onChange={setSelectedMonth} />
+        </div>
       </div>
 
       {error && (
@@ -383,10 +454,40 @@ function Expense() {
                     Valor estimado
                   </th>
                   <th className="text-right px-6 py-4 font-semibold text-foreground text-xs uppercase tracking-wider">
-                    Valor
+                    <button
+                      type="button"
+                      onClick={() => handleSort("amount")}
+                      className="inline-flex items-center gap-1 hover:text-primary transition-colors ml-auto"
+                    >
+                      Valor
+                      {sortBy === "amount" ? (
+                        sortOrder === "asc" ? (
+                          <ArrowUp className="w-3.5 h-3.5" />
+                        ) : (
+                          <ArrowDown className="w-3.5 h-3.5" />
+                        )
+                      ) : (
+                        <ArrowUpDown className="w-3.5 h-3.5 opacity-40" />
+                      )}
+                    </button>
                   </th>
                   <th className="text-left px-6 py-4 font-semibold text-foreground text-xs uppercase tracking-wider">
-                    Vencimento
+                    <button
+                      type="button"
+                      onClick={() => handleSort("date")}
+                      className="inline-flex items-center gap-1 hover:text-primary transition-colors"
+                    >
+                      Vencimento
+                      {sortBy === "date" ? (
+                        sortOrder === "asc" ? (
+                          <ArrowUp className="w-3.5 h-3.5" />
+                        ) : (
+                          <ArrowDown className="w-3.5 h-3.5" />
+                        )
+                      ) : (
+                        <ArrowUpDown className="w-3.5 h-3.5 opacity-40" />
+                      )}
+                    </button>
                   </th>
                   <th className="text-left px-6 py-4 font-semibold text-foreground text-xs uppercase tracking-wider">
                     Frequência

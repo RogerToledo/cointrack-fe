@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
 import {
   getInvoice,
@@ -17,7 +17,14 @@ import {
 } from "@cointrack/utils";
 import { parseMonthFromQuery } from "@/utils/competence";
 import { useToast } from "@/contexts/ToastContext";
-import { FileText, Lock, CreditCard as CardIcon } from "lucide-react";
+import {
+  FileText,
+  Lock,
+  CreditCard as CardIcon,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
+} from "lucide-react";
 import {
   Alert,
   Badge,
@@ -47,6 +54,8 @@ function Invoice() {
   const [error, setError] = useState<string | null>(null);
   const [invoiceStatus, setInvoiceStatus] = useState<"open" | "closed" | "paid">("open");
   const [paying, setPaying] = useState(false);
+  const [sortBy, setSortBy] = useState<"date" | "amount">("date");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -149,6 +158,29 @@ function Invoice() {
     }
   };
 
+  const handleSort = (field: "date" | "amount") => {
+    if (sortBy === field) {
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(field);
+      setSortOrder(field === "amount" ? "desc" : "asc");
+    }
+  };
+
+  const sortedPurchases = useMemo(() => {
+    return [...purchases].sort((a, b) => {
+      const dir = sortOrder === "asc" ? 1 : -1;
+      if (sortBy === "amount") {
+        const aVal = a.installment_value > 0 ? a.installment_value : a.amount;
+        const bVal = b.installment_value > 0 ? b.installment_value : b.amount;
+        return (aVal - bVal) * dir;
+      }
+      const aDate = a.date ? new Date(a.date).getTime() : 0;
+      const bDate = b.date ? new Date(b.date).getTime() : 0;
+      return (aDate - bDate) * dir;
+    });
+  }, [purchases, sortBy, sortOrder]);
+
   const totalAmount = purchases.reduce((sum, p) => {
     return sum + (p.installment_value > 0 ? p.installment_value : p.amount);
   }, 0);
@@ -205,6 +237,49 @@ function Invoice() {
                 ))}
               </select>
             </div>
+
+            <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-secondary border border-border self-start sm:self-auto">
+              <button
+                type="button"
+                onClick={() => handleSort("date")}
+                className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  sortBy === "date"
+                    ? "bg-card text-foreground shadow-xs font-semibold"
+                    : "text-muted hover:text-foreground"
+                }`}
+              >
+                Data
+                {sortBy === "date" ? (
+                  sortOrder === "asc" ? (
+                    <ArrowUp className="w-3.5 h-3.5" />
+                  ) : (
+                    <ArrowDown className="w-3.5 h-3.5" />
+                  )
+                ) : (
+                  <ArrowUpDown className="w-3.5 h-3.5 opacity-50" />
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSort("amount")}
+                className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  sortBy === "amount"
+                    ? "bg-card text-foreground shadow-xs font-semibold"
+                    : "text-muted hover:text-foreground"
+                }`}
+              >
+                Valor
+                {sortBy === "amount" ? (
+                  sortOrder === "asc" ? (
+                    <ArrowUp className="w-3.5 h-3.5" />
+                  ) : (
+                    <ArrowDown className="w-3.5 h-3.5" />
+                  )
+                ) : (
+                  <ArrowUpDown className="w-3.5 h-3.5 opacity-50" />
+                )}
+              </button>
+            </div>
           </div>
 
           <div className="flex items-center justify-between lg:justify-end gap-4 pt-3 lg:pt-0 border-t lg:border-t-0 border-border">
@@ -250,13 +325,43 @@ function Invoice() {
                     Local
                   </th>
                   <th className="text-right px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-muted">
-                    Valor
+                    <button
+                      type="button"
+                      onClick={() => handleSort("amount")}
+                      className="inline-flex items-center gap-1 hover:text-primary transition-colors ml-auto"
+                    >
+                      Valor
+                      {sortBy === "amount" ? (
+                        sortOrder === "asc" ? (
+                          <ArrowUp className="w-3.5 h-3.5" />
+                        ) : (
+                          <ArrowDown className="w-3.5 h-3.5" />
+                        )
+                      ) : (
+                        <ArrowUpDown className="w-3.5 h-3.5 opacity-40" />
+                      )}
+                    </button>
                   </th>
                   <th className="text-left px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-muted">
                     Parcelas
                   </th>
                   <th className="text-left px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-muted">
-                    Data
+                    <button
+                      type="button"
+                      onClick={() => handleSort("date")}
+                      className="inline-flex items-center gap-1 hover:text-primary transition-colors"
+                    >
+                      Data
+                      {sortBy === "date" ? (
+                        sortOrder === "asc" ? (
+                          <ArrowUp className="w-3.5 h-3.5" />
+                        ) : (
+                          <ArrowDown className="w-3.5 h-3.5" />
+                        )
+                      ) : (
+                        <ArrowUpDown className="w-3.5 h-3.5 opacity-40" />
+                      )}
+                    </button>
                   </th>
                   <th className="text-left px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-muted">
                     Cartão
@@ -267,7 +372,7 @@ function Invoice() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {purchases.map((purchase) => (
+                {sortedPurchases.map((purchase) => (
                   <tr
                     key={purchase.id}
                     className="hover:bg-background/70 transition-colors"

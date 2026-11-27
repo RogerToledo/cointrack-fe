@@ -69,11 +69,19 @@ export function createPurchaseService(client: AxiosInstance) {
       return response.data;
     },
 
-    getAll: async (month?: string, page = 1, limit = 20) => {
+    getAll: async (
+      month?: string,
+      page = 1,
+      limit = 20,
+      sortBy?: 'date' | 'amount',
+      sortOrder?: 'asc' | 'desc'
+    ) => {
       const params = new URLSearchParams();
       if (month) params.append('month', month);
       params.append('page', String(page));
       params.append('limit', String(limit));
+      if (sortBy) params.append('sort_by', sortBy);
+      if (sortOrder) params.append('sort_order', sortOrder);
       const response = await client.get<PurchasesPaginatedResponse>(
         `/v1/purchases?${params.toString()}`
       );

@@ -11,6 +11,7 @@ import {
   TrendingUp,
   TrendingDown,
   Wallet,
+  PiggyBank,
   PieChart,
   Tag,
 } from 'lucide-react';
@@ -303,7 +304,11 @@ function Dashboard() {
 
   const totalIncome = summary?.overview?.total_income ?? 0;
   const availableBalance = summary?.overview?.available_balance ?? (totalIncome - totalExpenses);
+  const previousBalance = summary?.overview?.previous_balance ?? 0;
+  const accumulatedAvailableBalance =
+    summary?.overview?.accumulated_available_balance ?? (previousBalance + availableBalance);
   const isPositiveBalance = availableBalance >= 0;
+  const isPositiveAccumulated = accumulatedAvailableBalance >= 0;
 
   const rawAvailablePct = summary?.overview?.available_percentage ??
     (totalIncome > 0 ? (availableBalance / totalIncome) * 100 : 0);
@@ -418,8 +423,8 @@ function Dashboard() {
         />
       )}
 
-      {/* 3 Main KPI Cards: Ganhos, Despesas Totais e Saldo Disponível */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* 4 Main KPI Cards: Ganhos, Despesas Totais, Saldo Disponível e Disponível Acumulado */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
           title="Total de Ganhos"
           value={formatBRL(totalIncome)}
@@ -451,13 +456,34 @@ function Dashboard() {
               </Badge>
             ) : undefined
           }
-          subtitle={totalIncome > 0 ? 'Economia prevista' : undefined}
+          subtitle={totalIncome > 0 ? 'Economia do mês' : undefined}
+        />
+
+        <KpiCard
+          title="Disponível Acumulado"
+          value={formatBRL(accumulatedAvailableBalance)}
+          valueClass={isPositiveAccumulated ? 'text-success' : 'text-danger'}
+          icon={<PiggyBank className="w-5 h-5 text-success" />}
+          iconBg="bg-success-light"
+          badge={
+            previousBalance !== 0 ? (
+              <Badge variant={previousBalance > 0 ? 'success' : 'warning'}>
+                {previousBalance > 0 ? '+' : ''}
+                {formatBRL(previousBalance)} ant.
+              </Badge>
+            ) : undefined
+          }
+          subtitle={
+            previousBalance !== 0
+              ? `Saldo anterior: ${formatBRL(previousBalance)}`
+              : 'Acumulado com meses anteriores'
+          }
         />
       </div>
 
       {/* Grouped Summary Table (Spec 0002) */}
       <Card padding="none" className="overflow-hidden">
-        <div className="p-4 border-b border-border bg-slate-50/50 flex items-center justify-between">
+        <div className="p-4 border-b border-border bg-secondary/50 flex items-center justify-between">
           <div>
             <h3 className="text-base font-semibold text-foreground">
               Compromissos Financeiros Agrupados
@@ -471,7 +497,7 @@ function Dashboard() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border bg-slate-50/30">
+              <tr className="border-b border-border bg-secondary/30">
                 <th className="text-left px-6 py-3.5 font-semibold text-foreground uppercase tracking-wider text-xs">
                   Descrição
                 </th>
@@ -493,7 +519,7 @@ function Dashboard() {
             >
               {loading && !hasLoadedOnce
                 ? DEFAULT_GROUPS.map((group) => (
-                    <tr key={group.type} className="even:bg-slate-50/30">
+                    <tr key={group.type} className="even:bg-secondary/30">
                       <td className="px-6 py-4">
                         <div className="h-5 w-32 bg-secondary rounded animate-pulse" />
                       </td>
@@ -512,14 +538,14 @@ function Dashboard() {
                     <tr
                       key={item.type}
                       onClick={() => handleNavigate(item.type)}
-                      className="even:bg-slate-50/30 hover:bg-slate-50/70 transition-colors cursor-pointer"
+                      className="even:bg-secondary/30 hover:bg-secondary/60 transition-colors cursor-pointer"
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2.5">
                           <span className="font-semibold text-foreground">
                             {item.description}
                           </span>
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-muted">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-secondary text-muted">
                             {formatItemsBadge(item.items_count)}
                           </span>
                         </div>
