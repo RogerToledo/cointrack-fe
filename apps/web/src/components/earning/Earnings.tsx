@@ -273,7 +273,7 @@ function Earnings() {
         isOpen={deleteTargetId !== null}
         onClose={() => setDeleteTargetId(null)}
         onConfirm={handleDelete}
-        message="Tem certeza que deseja excluir este ganho?"
+        message="Tem certeza que deseja excluir esta fonte de ganho? Todos os lançamentos mensais associados também serão removidos."
         isLoading={isDeleting}
       />
     </div>

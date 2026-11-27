@@ -17,6 +17,7 @@ export type {
 
 export const createEarningDefinition = earningService.createDefinition;
 export const createEarningRecord = earningService.createRecord;
+export const deleteEarningRecord = earningService.deleteRecord;
 export const updateEarning = earningService.update;
 export const deleteEarning = earningService.delete;
 export const getEarningBy = earningService.getById;

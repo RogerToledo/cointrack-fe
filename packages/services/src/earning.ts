@@ -19,6 +19,11 @@ export function createEarningService(client: AxiosInstance) {
       return response.data;
     },
 
+    deleteRecord: async (recordId: string) => {
+      const response = await client.delete(`/v1/earnings/records/${recordId}`);
+      return response.data;
+    },
+
     update: async (id: string, payload: EarningPayload) => {
       const response = await client.put('/v1/earnings', { id, ...payload });
       return response.data;

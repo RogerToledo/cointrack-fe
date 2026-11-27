@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import {
   getEarningsWithRecords,
-  deleteEarning,
+  deleteEarningRecord,
   EarningsResponse,
   PERIODICITY_LABELS,
 } from "@/services/earning";
@@ -88,17 +88,17 @@ function Earning() {
     openModal();
   };
 
-  const handleDelete = async (keepHistory: boolean) => {
+  const handleDelete = async () => {
     if (!deleteTargetId) return;
 
     setIsDeleting(true);
     try {
-      await deleteEarning(deleteTargetId, keepHistory);
+      await deleteEarningRecord(deleteTargetId);
       setDeleteTargetId(null);
       toast.success("Registro de ganho excluído com sucesso.");
       await fetchData();
     } catch (err) {
-      toast.error(extractErrorMessage(err, "Erro ao excluir ganho."));
+      toast.error(extractErrorMessage(err, "Erro ao excluir registro de ganho."));
     } finally {
       setIsDeleting(false);
     }
@@ -265,9 +265,10 @@ function Earning() {
                         </IconButton>
                         <IconButton
                           tone="delete"
-                          onClick={() => setDeleteTargetId(earning.id)}
-                          title="Excluir ganho"
-                          aria-label="Excluir ganho"
+                          disabled={!earning.record?.id}
+                          onClick={() => earning.record?.id && setDeleteTargetId(earning.record.id)}
+                          title="Excluir registro do mês"
+                          aria-label="Excluir registro do mês"
                         >
                           <Trash2 size={16} />
                         </IconButton>
@@ -293,7 +294,7 @@ function Earning() {
         isOpen={deleteTargetId !== null}
         onClose={() => setDeleteTargetId(null)}
         onConfirm={handleDelete}
-        message="Tem certeza que deseja excluir este ganho?"
+        message="Tem certeza que deseja excluir este lançamento do mês? A fonte de ganho e os demais meses serão mantidos."
         isLoading={isDeleting}
       />
     </div>
